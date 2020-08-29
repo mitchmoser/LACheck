@@ -1,5 +1,5 @@
 # LACheck
-C# .NET Assembly Local Administrative Privilege Enumeration 
+Multithreaded C# .NET Assembly Local Administrative Privilege Enumeration 
 
 ### Example Usage
 ```
