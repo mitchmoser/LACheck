@@ -3,7 +3,6 @@ C# .NET Assembly Local Administrative Privilege Enumeration
 
 ### Example Usage
 ```
-
   _                  _____ _               _
  | |        /\      / ____| |             | |
  | |       /  \    | |    | |__   ___  ___| | __
