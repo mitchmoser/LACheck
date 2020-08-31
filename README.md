@@ -3,7 +3,7 @@ Multithreaded C# .NET Assembly Local Administrative Privilege Enumeration
 
 ### Example Usage
 ```
-$ ./LACheck.exe help
+> ./LACheck.exe help
   _                  _____ _               _
  | |        /\      / ____| |             | |
  | |       /  \    | |    | |__   ___  ___| | __
