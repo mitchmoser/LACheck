@@ -47,11 +47,12 @@ namespace LACheck
             {
                 validate = Convert.ToBoolean(parsedArgs["/validate"][0]);
             }
+
+            PrintOptions(parsedArgs, rpc, smb, winrm);
             if (validate)
             {
                 ValidateCredentials();
             }
-            PrintOptions(parsedArgs, rpc, smb, winrm);
 
             List<string> hosts = new List<string>();
             if (parsedArgs.ContainsKey("/targets"))
