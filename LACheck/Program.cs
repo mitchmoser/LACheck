@@ -47,6 +47,10 @@ namespace LACheck
             {
                 validate = Convert.ToBoolean(parsedArgs["/validate"][0]);
             }
+            if (validate)
+            {
+                ValidateCredentials();
+            }
             PrintOptions(parsedArgs, rpc, smb, winrm);
 
             List<string> hosts = new List<string>();
@@ -63,11 +67,6 @@ namespace LACheck
             else
             {
                 hosts.Add("localhost");
-            }
-
-            if (validate)
-            {
-                ValidateCredentials();
             }
 
             //https://docs.microsoft.com/en-us/windows/win32/wmisdk/wql-operators
