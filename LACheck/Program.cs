@@ -68,6 +68,8 @@ namespace LACheck
             {
                 hosts.Add("localhost");
             }
+            //remove duplicate hosts
+            hosts = hosts.Distinct().ToList();
 
             //https://docs.microsoft.com/en-us/windows/win32/wmisdk/wql-operators
             //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystem
@@ -159,14 +161,16 @@ namespace LACheck
                 
                 mySearcher.SizeLimit = int.MaxValue;
                 mySearcher.PageSize = int.MaxValue;
+                int counter = 0;
                 foreach (SearchResult resEnt in mySearcher.FindAll())
                 {
                     string ComputerName = resEnt.GetDirectoryEntry().Name;
                     if (ComputerName.StartsWith("CN="))
                         ComputerName = ComputerName.Remove(0, "CN=".Length);
                     ComputerNames.Add(ComputerName);
+                    counter += 1;
                 }
-
+                Console.WriteLine("[+] LDAP Search Results: {0}", counter.ToString());
                 mySearcher.Dispose();
                 entry.Dispose();
 
