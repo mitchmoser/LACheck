@@ -1,13 +1,13 @@
 ﻿using System;
-using System.Management;
-using System.IO;
 using System.Collections.Generic;
+using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
-using System.Threading;
-using WSManAutomation;
-
+using System.IO;
 using System.Linq;
+using System.Management;
+using System.Threading;
 using System.Xml.Linq;
+using WSManAutomation; //Add Reference -> windows\system32\wsmauto.dll (or COM: Microsoft WSMan Automation V 1.0 Library)
 
 namespace LACheck
 {
@@ -48,15 +48,26 @@ namespace LACheck
                 validate = Convert.ToBoolean(parsedArgs["/validate"][0]);
             }
             PrintOptions(parsedArgs, rpc, smb, winrm);
+
+            List<string> hosts = new List<string>();
+            if (parsedArgs.ContainsKey("/targets"))
+            {
+                List<string> targets = parsedArgs["/targets"][0].Split(',').ToList();
+                hosts = hosts.Concat(targets).ToList();
+            }
+            if (parsedArgs.ContainsKey("/ldap"))
+            {
+                List<string> ldap = GetComputers(parsedArgs["/ldap"][0].ToLower(), verbose);
+                hosts = hosts.Concat(ldap).ToList();
+            }
+            else
+            {
+                hosts.Add("localhost");
+            }
+
             if (validate)
             {
                 ValidateCredentials();
-            }
-
-            string[] hosts = { "localhost" };
-            if (parsedArgs.ContainsKey("/targets"))
-            {
-                hosts = parsedArgs["/targets"][0].Split(',');
             }
 
             //https://docs.microsoft.com/en-us/windows/win32/wmisdk/wql-operators
@@ -107,7 +118,71 @@ namespace LACheck
                 }
             }
         }
+        public static List<string> GetComputers(string filter, bool verbose)
+        {
+            try
+            {
+                List<string> ComputerNames = new List<string>();
 
+                DirectoryEntry entry = new DirectoryEntry();
+                DirectorySearcher mySearcher = new DirectorySearcher(entry);
+
+                //https://social.technet.microsoft.com/wiki/contents/articles/5392.active-directory-ldap-syntax-filters.aspx
+                //https://ldapwiki.com/wiki/Active%20Directory%20Computer%20Related%20LDAP%20Query
+                switch (filter)
+                {
+                    case "all":
+                        //All enabled computers with "primary" group "Domain Computers"
+                        mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))");
+                        break;
+                    case "dc":
+                        //All enabled Domain Controllers
+                        mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(userAccountControl:1.2.840.113556.1.4.803:=8192))");
+                        break;
+                    case "exclude-dc":
+                        //All enabled computers that are not Domain Controllers
+                        mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(!(userAccountControl:1.2.840.113556.1.4.803:=8192)))");
+                        break;
+                    case "servers":
+                        //All enabled servers
+                        mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(operatingSystem=*server*))");
+                        break;
+                    case "servers-exclude-dc":
+                        //All enabled servers excluding DCs
+                        mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(operatingSystem=*server*)(!(userAccountControl:1.2.840.113556.1.4.803:=8192)))");
+                        break;
+                    default:
+                        Console.WriteLine("[!] Invalid LDAP filter: {0}", filter);
+                        Usage();
+                        Environment.Exit(0);
+                        break;
+                }
+                
+                mySearcher.SizeLimit = int.MaxValue;
+                mySearcher.PageSize = int.MaxValue;
+                foreach (SearchResult resEnt in mySearcher.FindAll())
+                {
+                    string ComputerName = resEnt.GetDirectoryEntry().Name;
+                    if (ComputerName.StartsWith("CN="))
+                        ComputerName = ComputerName.Remove(0, "CN=".Length);
+                    ComputerNames.Add(ComputerName);
+                }
+
+                mySearcher.Dispose();
+                entry.Dispose();
+
+                return ComputerNames;
+            }
+            catch (Exception ex)
+            {
+                if (verbose)
+                {
+                    Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
+                }
+                Environment.Exit(0);
+                return null;
+            }
+        }
         static void WinRM_Check(string host, string wql, bool verbose)
         {
             try
@@ -232,7 +307,7 @@ namespace LACheck
  |______/_/    \_\  \_____|_| |_|\___|\___|_|\_\
 
 Usage:
-    LACheck.exe smb rpc /targets:hostname,fqdn.domain.tld,10.10.10.10 /verbose /validate
+    LACheck.exe smb rpc /ldap:all /targets:hostname,fqdn.domain.tld,10.10.10.10 /verbose /validate
 
 Local Admin Checks:
     smb   - Attempts to access C$ share
@@ -243,6 +318,12 @@ Argument:
     /targets  - comma-separated list of hostnames to check. If none provided, localhost will be checked.
     /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
     /verbose  - print additional logging information
+    /ldap - query hosts from the following LDAP filters:
+        all - All enabled computers with 'primary' group 'Domain Computers'
+        dc - All enabled Domain Controllers
+        exclude-dc - All enabled computers that are not Domain Controllers
+        servers - All enabled servers
+        servers-exclude-dc - All enabled servers excluding DCs
 ";
             Console.WriteLine(usageString);
         }
