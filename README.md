@@ -12,19 +12,25 @@ Multithreaded C# .NET Assembly Local Administrative Privilege Enumeration
  |______/_/    \_\  \_____|_| |_|\___|\___|_|\_\
 
 Usage:
-    LACheck.exe smb rpc /targets:hostname,fqdn.domain.tld,10.10.10.10 /verbose /validate
+    LACheck.exe smb rpc /ldap:all /targets:hostname,fqdn.domain.tld,10.10.10.10 /verbose /validate
 
 Local Admin Checks:
     smb   - Attempts to access C$ share
     rpc   - Attempts WMI query of Win32_ComputerSystem Class provider over RPC
     winrm - Attempts WMI query of Win32_ComputerSystem Class Provider over WinRM Session
 
-Argument:
+Arguments:
     /targets  - comma-separated list of hostnames to check. If none provided, localhost will be checked.
     /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
     /verbose  - print additional logging information
+    /ldap - query hosts from the following LDAP filters:
+         :all - All enabled computers with 'primary' group 'Domain Computers'
+         :dc - All enabled Domain Controllers
+         :exclude-dc - All enabled computers that are not Domain Controllers
+         :servers - All enabled servers
+         :servers-exclude-dc - All enabled servers excluding DCs
 
-execute-assembly /opt/SharpTools/LACheck smb rpc winrm /targets:WEB01,DEV02.contoso.com,10.10.10.10 /verbose /validate
+execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:all /targets:WEB01,DEV02.contoso.com,10.10.10.10 /verbose /validate
 ```
 ### Output
 ```
@@ -35,6 +41,7 @@ execute-assembly /opt/SharpTools/LACheck smb rpc winrm /targets:WEB01,DEV02.cont
         rpc: true
         smb: true
         winrm: true
+        /ldap: all
         /targets: WEB01,DEV02.contoso.com,10.10.10.10
         /verbose: true
 [+] Credentials Validated
