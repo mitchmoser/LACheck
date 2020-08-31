@@ -314,16 +314,16 @@ Local Admin Checks:
     rpc   - Attempts WMI query of Win32_ComputerSystem Class provider over RPC
     winrm - Attempts WMI query of Win32_ComputerSystem Class Provider over WinRM Session
 
-Argument:
+Arguments:
     /targets  - comma-separated list of hostnames to check. If none provided, localhost will be checked.
     /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
     /verbose  - print additional logging information
     /ldap - query hosts from the following LDAP filters:
-        all - All enabled computers with 'primary' group 'Domain Computers'
-        dc - All enabled Domain Controllers
-        exclude-dc - All enabled computers that are not Domain Controllers
-        servers - All enabled servers
-        servers-exclude-dc - All enabled servers excluding DCs
+         :all - All enabled computers with 'primary' group 'Domain Computers'
+         :dc - All enabled Domain Controllers
+         :exclude-dc - All enabled computers that are not Domain Controllers
+         :servers - All enabled servers
+         :servers-exclude-dc - All enabled servers excluding DCs
 ";
             Console.WriteLine(usageString);
         }
