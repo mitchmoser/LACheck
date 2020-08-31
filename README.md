@@ -12,7 +12,7 @@ Multithreaded C# .NET Assembly Local Administrative Privilege Enumeration
  |______/_/    \_\  \_____|_| |_|\___|\___|_|\_\
 
 Usage:
-    LACheck.exe smb rpc /ldap:all /targets:hostname,fqdn.domain.tld,10.10.10.10 /verbose /validate
+    LACheck.exe smb rpc /ldap:servers-exclude-dc /targets:hostname,fqdn.domain.tld,10.10.10.10 /verbose /validate
 
 Local Admin Checks:
     smb   - Attempts to access C$ share
@@ -30,21 +30,22 @@ Arguments:
          :servers - All enabled servers
          :servers-exclude-dc - All enabled servers excluding DCs
 
-execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:all /targets:WEB01,DEV02.contoso.com,10.10.10.10 /verbose /validate
+execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /verbose /validate
 ```
 ### Output
 ```
-[*] Tasked beacon to run .NET program: LACheck smb rpc winrm /targets:WEB01,DEV02.contoso.com,10.10.10.10 /verbose /validate
+[*] Tasked beacon to run .NET program: LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /verbose /validate
 [+] host called home, sent: 111705 bytes
 [+] received Output
 [+] Parsed Aguments:
         rpc: true
         smb: true
         winrm: true
-        /ldap: all
+        /ldap: servers-exclude-dc
         /targets: WEB01,DEV02.contoso.com,10.10.10.10
         /verbose: true
-[+] Credentials Validated
+[+] Credentials Validated on Domain
+[+] LDAP Search Results: 2
 [+] Connecting to WEB01
 [+] Connecting to DEV02.contoso.com
 [+] Connecting to 10.10.10.10
