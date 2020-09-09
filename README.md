@@ -33,7 +33,7 @@ Arguments:
 ```
 ### Execute Assembly
 ```
-execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /verbose /validate
+execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /verbose /threads:10 /validate
 ```
 ### Output
 ```
@@ -47,11 +47,9 @@ execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc 
         /ldap: servers-exclude-dc
         /targets: WEB01,DEV02.contoso.com,10.10.10.10
         /verbose: true
+        /threads: 10
 [+] Credentials Validated on Domain
 [+] LDAP Search Results: 2
-[+] Connecting to WEB01
-[+] Connecting to DEV02.contoso.com
-[+] Connecting to 10.10.10.10
 [SMB] Admin Success: WEB01
 [RPC] Admin Success: WEB01
 [WinRM] Admin Success: DESKTOP-118GDCE
