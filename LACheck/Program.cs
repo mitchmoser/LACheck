@@ -5,7 +5,7 @@ using System.DirectoryServices.AccountManagement;
 using System.IO;
 using System.Linq;
 using System.Management;
-using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using WSManAutomation; //Add Reference -> windows\system32\wsmauto.dll (or COM: Microsoft WSMan Automation V 1.0 Library)
 
@@ -47,7 +47,11 @@ namespace LACheck
             {
                 validate = Convert.ToBoolean(parsedArgs["/validate"][0]);
             }
-
+            int threads = 25;
+            if (parsedArgs.ContainsKey("/threads"))
+            {
+                threads = Convert.ToInt32(parsedArgs["/threads"][0]);
+            }
             PrintOptions(parsedArgs, rpc, smb, winrm);
             if (validate)
             {
@@ -78,47 +82,32 @@ namespace LACheck
             //string wql = "Select * from Win32_LogonSession Where LogonType = 10";
             string wql = "SELECT PartOfDomain FROM Win32_ComputerSystem";
             string ns = @"root\cimv2";
-            
+
+            //https://blog.danskingdom.com/limit-the-number-of-c-tasks-that-run-in-parallel/
+            var listOfChecks = new List<Action>();
+
             foreach (string host in hosts)
             {
-                try
+                //RPC Check
+                if (rpc)
                 {
-                    if (verbose)
-                    {
-                        Console.WriteLine("[+] Connecting to {0}", host);
-                    }
-                    //RPC Check
-                    if (rpc)
-                    {
-                        //https://stackoverflow.com/questions/1195896/threadstart-with-parameters
-                        Thread newThread = new Thread(() => RPC_Check(host, ns, wql, verbose));
-                        newThread.Start();
-                    }
-                    
-                    //SMB Check
-                    if (smb)
-                    {
-                        Thread newThread = new Thread(() => SMB_Check(host, verbose));
-                        newThread.Start();
-                    }
-
-                    //WinRM Check
-                    if (winrm)
-                    {
-                        //https://stackoverflow.com/questions/1195896/threadstart-with-parameters
-                        Thread newThread = new Thread(() => WinRM_Check(host, wql, verbose));
-                        newThread.Start();
-                    }
+                    // Note that we create the Action here, but do not start it.
+                    listOfChecks.Add(() => RPC_Check(host, ns, wql, verbose));
+                }   
+                //SMB Check
+                if (smb)
+                {
+                    listOfChecks.Add(() => SMB_Check(host, verbose));
                 }
-                catch (Exception ex)
+                //WinRM Check
+                if (winrm)
                 {
-                    if (verbose)
-                    {
-                        Console.WriteLine("[!] {0} - {1}", host, ex.Message);
-                        continue;
-                    }
+                    listOfChecks.Add(() => WinRM_Check(host, wql, verbose));
                 }
             }
+            var options = new ParallelOptions { MaxDegreeOfParallelism = threads };
+            Parallel.Invoke(options, listOfChecks.ToArray());
+            Console.WriteLine("[+] Finished");
         }
         public static List<string> GetComputers(string filter, bool verbose)
         {
@@ -217,7 +206,7 @@ namespace LACheck
                 }
                 if (results != "")
                 {
-                    Console.WriteLine("[WinRM] Admin Succes: {0}", host);
+                    Console.WriteLine("[WinRM] Admin Success: {0}", host);
                 }
                 if (verbose && results == "")
                 {
@@ -228,7 +217,7 @@ namespace LACheck
             {
                 if (verbose)
                 {
-                    Console.WriteLine("[!] WinRM on {0} - {1}", host, ex.Message);
+                    Console.WriteLine("[!] WinRM on {0} - {1}", host, ex.Message.Trim());
                 }
             }
 
@@ -245,13 +234,13 @@ namespace LACheck
                 {
                     ManagementObjectCollection services = searcher.Get();
                 }
-                Console.WriteLine("[RPC] Admin Succes: {0}", host);
+                Console.WriteLine("[RPC] Admin Success: {0}", host);
             }
             catch (Exception ex)
             {
                 if (verbose)
                 {
-                    Console.WriteLine("[!] RPC on {0} - {1}", host, ex.Message);
+                    Console.WriteLine("[!] RPC on {0} - {1}", host, ex.Message.Trim());
                 }
             }
         }
@@ -261,13 +250,13 @@ namespace LACheck
             {
                 string share = "\\\\" + host + "\\C$";
                 System.Security.AccessControl.DirectorySecurity ds = Directory.GetAccessControl(share);
-                Console.WriteLine("[SMB] Admin Succes: {0}", host);
+                Console.WriteLine("[SMB] Admin Success: {0}", host);
             }
             catch (Exception ex)
             {
                 if (verbose)
                 {
-                    Console.WriteLine("[!] SMB on {0} - {1}", host, ex.Message);
+                    Console.WriteLine("[!] SMB on {0} - {1}", host, ex.Message.Trim());
                 }
             }
         }
@@ -322,6 +311,7 @@ Arguments:
     /targets  - comma-separated list of hostnames to check. If none provided, localhost will be checked.
     /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
     /verbose  - print additional logging information
+    /threads  - specify maximum number of parallel threads (default=25)
     /ldap - query hosts from the following LDAP filters:
          :all - All enabled computers with 'primary' group 'Domain Computers'
          :dc - All enabled Domain Controllers
