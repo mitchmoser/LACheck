@@ -66,12 +66,19 @@ namespace LACheck
             }
             if (parsedArgs.ContainsKey("/ldap"))
             {
-                List<string> ldap = GetComputers(parsedArgs["/ldap"][0].ToLower(), verbose);
+                List<string> ldap = SearchLDAP(parsedArgs["/ldap"][0].ToLower(), verbose);
                 hosts = hosts.Concat(ldap).ToList();
+            }
+            if (parsedArgs.ContainsKey("/ou"))
+            {
+                List<string> ou = SearchOU(parsedArgs["/ou"][0].ToLower(), verbose);
+                hosts = hosts.Concat(ou).ToList();
             }
             else
             {
-                hosts.Add("localhost");
+                Console.WriteLine("[!] No targets specified - use /targets, /ldap, or /ou flags");
+                Usage();
+                Environment.Exit(0);
             }
             //remove duplicate hosts
             hosts = hosts.Distinct().ToList();
@@ -109,7 +116,44 @@ namespace LACheck
             Parallel.Invoke(options, listOfChecks.ToArray());
             Console.WriteLine("[+] Finished");
         }
-        public static List<string> GetComputers(string filter, bool verbose)
+        public static List<string> SearchOU(string ou, bool verbose)
+        {
+            try
+            {
+                List<string> ComputerNames = new List<string>();
+                string searchbase = "LDAP://" + ou;//OU=Domain Controllers,DC=example,DC=local";
+                DirectoryEntry entry = new DirectoryEntry(searchbase);
+                DirectorySearcher mySearcher = new DirectorySearcher(entry);
+                // filter for all enabled computers
+                mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))");
+                mySearcher.SizeLimit = int.MaxValue;
+                mySearcher.PageSize = int.MaxValue;
+                int counter = 0;
+                foreach (SearchResult resEnt in mySearcher.FindAll())
+                {
+                    string ComputerName = resEnt.GetDirectoryEntry().Name;
+                    if (ComputerName.StartsWith("CN="))
+                        ComputerName = ComputerName.Remove(0, "CN=".Length);
+                    ComputerNames.Add(ComputerName);
+                    counter += 1;
+                }
+                Console.WriteLine("[+] OU Search Results: {0}", counter.ToString());
+                mySearcher.Dispose();
+                entry.Dispose();
+
+                return ComputerNames;
+            }
+            catch (Exception ex)
+            {
+                if (verbose)
+                {
+                    Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
+                }
+                Environment.Exit(0);
+                return null;
+            }
+        }
+        public static List<string> SearchLDAP(string filter, bool verbose)
         {
             try
             {
@@ -300,7 +344,7 @@ namespace LACheck
  |______/_/    \_\  \_____|_| |_|\___|\___|_|\_\
 
 Usage:
-    LACheck.exe smb rpc /ldap:all /targets:hostname,fqdn.domain.tld,10.10.10.10 /verbose /validate
+    LACheck.exe smb rpc /targets:hostname,fqdn.domain.tld,10.10.10.10 /ldap:all /ou:""OU=Special Servers,DC=example,DC=local"" /verbose /validate
 
 Local Admin Checks:
     smb   - Attempts to access C$ share
@@ -312,6 +356,8 @@ Arguments:
     /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
     /verbose  - print additional logging information
     /threads  - specify maximum number of parallel threads (default=25)
+    /ou       - specify LDAP OU to query enabled computer objects from
+                ex: ""OU=Special Servers,DC=example,DC=local""
     /ldap - query hosts from the following LDAP filters:
          :all - All enabled computers with 'primary' group 'Domain Computers'
          :dc - All enabled Domain Controllers
