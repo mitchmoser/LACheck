@@ -58,25 +58,29 @@ namespace LACheck
                 ValidateCredentials();
             }
 
+            bool noHosts = true;
             List<string> hosts = new List<string>();
             if (parsedArgs.ContainsKey("/targets"))
             {
                 List<string> targets = parsedArgs["/targets"][0].Split(',').ToList();
                 hosts = hosts.Concat(targets).ToList();
+                noHosts = false;
             }
             if (parsedArgs.ContainsKey("/ldap"))
             {
                 List<string> ldap = SearchLDAP(parsedArgs["/ldap"][0].ToLower(), verbose);
                 hosts = hosts.Concat(ldap).ToList();
+                noHosts = false;
             }
             if (parsedArgs.ContainsKey("/ou"))
             {
                 List<string> ou = SearchOU(parsedArgs["/ou"][0].ToLower(), verbose);
                 hosts = hosts.Concat(ou).ToList();
+                noHosts = false;
             }
-            else
+            if (noHosts)
             {
-                Console.WriteLine("[!] No targets specified - use /targets, /ldap, or /ou flags");
+                Console.WriteLine("[!] No hosts specified - use /targets, /ldap, or /ou flags");
                 Usage();
                 Environment.Exit(0);
             }
