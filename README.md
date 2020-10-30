@@ -20,10 +20,13 @@ Local Admin Checks:
     winrm - Attempts WMI query of Win32_ComputerSystem Class Provider over WinRM Session
 
 Arguments:
+    /logons   - return logged on users on a host (requires SMB)
     /targets  - comma-separated list of hostnames to check. If none provided, localhost will be checked.
+    /threads  - specify maximum number of parallel threads (default=25)
     /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
     /verbose  - print additional logging information
-    /threads  - specify maximum number of parallel threads (default=25)
+    /ou       - specify LDAP OU to query enabled computer objects from
+                ex: ""OU=Special Servers,DC=example,DC=local""
     /ldap - query hosts from the following LDAP filters:
          :all - All enabled computers with 'primary' group 'Domain Computers'
          :dc - All enabled Domain Controllers
@@ -33,11 +36,11 @@ Arguments:
 ```
 ### Execute Assembly
 ```
-execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /verbose /threads:10 /validate
+execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /logons /threads:10 /validate /verbose
 ```
 ### Output
 ```
-[*] Tasked beacon to run .NET program: LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /verbose /validate
+[*] Tasked beacon to run .NET program: LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /logons /threads:10 /validate /verbose
 [+] host called home, sent: 111705 bytes
 [+] received Output
 [+] Parsed Aguments:
@@ -46,11 +49,16 @@ execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc 
         winrm: true
         /ldap: servers-exclude-dc
         /targets: WEB01,DEV02.contoso.com,10.10.10.10
+        /logons: true
+        /validate: true
         /verbose: true
         /threads: 10
 [+] Credentials Validated on Domain
 [+] LDAP Search Results: 2
 [SMB] Admin Success: WEB01
+[session] WEB01 - contoso\devadmin
+[session] WEB01 - contoso\devuser
+[session] WEB01 - contoso\WEB01$
 [RPC] Admin Success: WEB01
 [WinRM] Admin Success: DESKTOP-118GDCE
 [WinRM] Admin Success: DEV02.contoso.com
