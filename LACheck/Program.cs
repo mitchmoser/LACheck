@@ -5,6 +5,7 @@ using System.DirectoryServices.AccountManagement;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using WSManAutomation; //Add Reference -> windows\system32\wsmauto.dll (or COM: Microsoft WSMan Automation V 1.0 Library)
@@ -13,15 +14,47 @@ namespace LACheck
 {
     class Program
     {
+        [DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+
+        //https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/nf-lmwksta-netwkstauserenum
+        //Lists users currently logged onto host
+        //includes interactive, service, and batch logons
+        static extern int NetWkstaUserEnum(string servername,
+                                           int level,
+                                           out IntPtr bufptr,
+                                           int prefmaxlen,
+                                           out int entriesread,
+                                           out int totalentries,
+                                           ref int resume_handle);
+
+        [DllImport("netapi32.dll")]
+        static extern int NetApiBufferFree(IntPtr Buffer);
+        const int NERR_SUCCESS = 0;
+        const int ERROR_MORE_DATA = 234;
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct WKSTA_USER_INFO_0
+        {
+            public string wkui0_username;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct WKSTA_USER_INFO_1
+        {
+            public string wkui1_username;
+            public string wkui1_logon_domain;
+            public string wkui1_oth_domains;
+            public string wkui1_logon_server;
+        }
         static void Main(string[] args)
         {
             var parsedArgs = ParseArgs(args);
             ValidateArguments(parsedArgs);
-            
-            bool verbose = false;
-            if (parsedArgs.ContainsKey("/verbose"))
+
+            bool logons = false;
+            if (parsedArgs.ContainsKey("/logons"))
             {
-                verbose = Convert.ToBoolean(parsedArgs["/verbose"][0]);
+                logons = Convert.ToBoolean(parsedArgs["/logons"][0]);
             }
 
             bool rpc = false;
@@ -47,11 +80,19 @@ namespace LACheck
             {
                 validate = Convert.ToBoolean(parsedArgs["/validate"][0]);
             }
+
+            bool verbose = false;
+            if (parsedArgs.ContainsKey("/verbose"))
+            {
+                verbose = Convert.ToBoolean(parsedArgs["/verbose"][0]);
+            }
+
             int threads = 25;
             if (parsedArgs.ContainsKey("/threads"))
             {
                 threads = Convert.ToInt32(parsedArgs["/threads"][0]);
             }
+
             PrintOptions(parsedArgs, rpc, smb, winrm);
             if (validate)
             {
@@ -104,11 +145,11 @@ namespace LACheck
                 {
                     // Note that we create the Action here, but do not start it.
                     listOfChecks.Add(() => RPC_Check(host, ns, wql, verbose));
-                }   
+                }
                 //SMB Check
                 if (smb)
                 {
-                    listOfChecks.Add(() => SMB_Check(host, verbose));
+                    listOfChecks.Add(() => SMB_Check(host, logons, verbose));
                 }
                 //WinRM Check
                 if (winrm)
@@ -119,6 +160,64 @@ namespace LACheck
             var options = new ParallelOptions { MaxDegreeOfParallelism = threads };
             Parallel.Invoke(options, listOfChecks.ToArray());
             Console.WriteLine("[+] Finished");
+        }
+
+        //http://www.pinvoke.net/default.aspx/netapi32.netwkstauserenum
+        public static void GetLoggedOnUsers(string hostName, bool verbose)
+        {
+
+            IntPtr bufptr = IntPtr.Zero;
+            int dwEntriesread;
+            int dwTotalentries = 0;
+            int dwResumehandle = 0;
+            int nStatus;
+            Type tWui1 = typeof(WKSTA_USER_INFO_1);
+            int nStructSize = Marshal.SizeOf(tWui1);
+            WKSTA_USER_INFO_1 wui1;
+            List<string> loggedOnUsers = new List<string>();
+
+            do
+            {
+                //https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/nf-lmwksta-netwkstauserenum
+                //Lists users currently logged onto host
+                //includes interactive, service, and batch logons
+                nStatus = NetWkstaUserEnum(hostName, 1, out bufptr, 32768, out dwEntriesread, out dwTotalentries, ref dwResumehandle);
+
+                // If the call succeeds,
+                if ((nStatus == NERR_SUCCESS) | (nStatus == ERROR_MORE_DATA))
+                {
+                    if (dwEntriesread > 0)
+                    {
+                        IntPtr pstruct = bufptr;
+
+                        // Loop through the entries.
+                        for (int i = 0; i < dwEntriesread; i++)
+                        {
+                            wui1 = (WKSTA_USER_INFO_1)Marshal.PtrToStructure(pstruct, tWui1);
+                            loggedOnUsers.Add(wui1.wkui1_logon_domain + "\\" + wui1.wkui1_username);
+                            pstruct = (IntPtr)((int)pstruct + nStructSize);
+                        }
+
+                        //remove duplicate users
+                        loggedOnUsers = loggedOnUsers.Distinct().ToList();
+                        foreach (string user in loggedOnUsers)
+                        {
+                            Console.WriteLine("[session] {0} - {1}", hostName, user);
+                        }
+                    }
+                    else
+                    {
+                        if (verbose)
+                        {
+                            Console.WriteLine("[!] A system error has occurred : " + nStatus);
+                        }
+                    }
+                }
+
+                if (bufptr != IntPtr.Zero)
+                    NetApiBufferFree(bufptr);
+
+            } while (nStatus == ERROR_MORE_DATA);
         }
         public static List<string> SearchOU(string ou, bool verbose)
         {
@@ -292,13 +391,17 @@ namespace LACheck
                 }
             }
         }
-        static void SMB_Check(string host, bool verbose)
+        static void SMB_Check(string host, bool logons, bool verbose)
         {
             try
             {
                 string share = "\\\\" + host + "\\C$";
                 System.Security.AccessControl.DirectorySecurity ds = Directory.GetAccessControl(share);
                 Console.WriteLine("[SMB] Admin Success: {0}", host);
+                if (logons)
+                {
+                    GetLoggedOnUsers(host, verbose);
+                }
             }
             catch (Exception ex)
             {
@@ -356,10 +459,11 @@ Local Admin Checks:
     winrm - Attempts WMI query of Win32_ComputerSystem Class Provider over WinRM Session
 
 Arguments:
+    /logons   - return logged on users on a host (requires SMB)
     /targets  - comma-separated list of hostnames to check. If none provided, localhost will be checked.
+    /threads  - specify maximum number of parallel threads (default=25)
     /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
     /verbose  - print additional logging information
-    /threads  - specify maximum number of parallel threads (default=25)
     /ou       - specify LDAP OU to query enabled computer objects from
                 ex: ""OU=Special Servers,DC=example,DC=local""
     /ldap - query hosts from the following LDAP filters:
