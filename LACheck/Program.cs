@@ -227,6 +227,7 @@ namespace LACheck
                 string searchbase = "LDAP://" + ou;//OU=Domain Controllers,DC=example,DC=local";
                 DirectoryEntry entry = new DirectoryEntry(searchbase);
                 DirectorySearcher mySearcher = new DirectorySearcher(entry);
+                mySearcher.PropertiesToLoad.Add("samaccountname");
                 // filter for all enabled computers
                 mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))");
                 mySearcher.SizeLimit = int.MaxValue;
