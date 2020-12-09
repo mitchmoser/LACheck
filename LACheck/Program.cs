@@ -232,16 +232,16 @@ namespace LACheck
                 mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))");
                 mySearcher.SizeLimit = int.MaxValue;
                 mySearcher.PageSize = int.MaxValue;
-                int counter = 0;
                 foreach (SearchResult resEnt in mySearcher.FindAll())
                 {
                     string ComputerName = resEnt.GetDirectoryEntry().Name;
                     if (ComputerName.StartsWith("CN="))
                         ComputerName = ComputerName.Remove(0, "CN=".Length);
                     ComputerNames.Add(ComputerName);
-                    counter += 1;
                 }
-                Console.WriteLine("[+] OU Search Results: {0}", counter.ToString());
+                //localhost returns false positives
+                ComputerNames.RemoveAll(u => u.Contains(System.Environment.MachineName));
+                Console.WriteLine("[+] OU Search Results: {0}", ComputerNames.Count().ToString());
                 mySearcher.Dispose();
                 entry.Dispose();
 
