@@ -43,7 +43,7 @@ execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc 
 [*] Tasked beacon to run .NET program: LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /logons /threads:10 /validate /verbose
 [+] host called home, sent: 111705 bytes
 [+] received Output
-[+] Parsed Aguments:
+[+] Parsed Arguments:
         rpc: true
         smb: true
         winrm: true
