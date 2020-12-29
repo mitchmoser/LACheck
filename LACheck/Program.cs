@@ -195,7 +195,7 @@ namespace LACheck
                         {
                             wui1 = (WKSTA_USER_INFO_1)Marshal.PtrToStructure(pstruct, tWui1);
                             loggedOnUsers.Add(wui1.wkui1_logon_domain + "\\" + wui1.wkui1_username);
-                            pstruct = (IntPtr)((int)pstruct + nStructSize);
+                            pstruct = (IntPtr)((long)pstruct + nStructSize);
                         }
 
                         //remove duplicate users
