@@ -14,6 +14,72 @@ namespace LACheck
 {
     class Program
     {
+        [DllImport("wtsapi32.dll")]
+        static extern IntPtr WTSOpenServer([MarshalAs(UnmanagedType.LPStr)] string pServerName);
+
+        [DllImport("wtsapi32.dll")]
+        static extern void WTSCloseServer(IntPtr hServer);
+
+        [DllImport("wtsapi32.dll")]
+        static extern Int32 WTSEnumerateSessions(
+            IntPtr hServer,
+            [MarshalAs(UnmanagedType.U4)] Int32 Reserved,
+            [MarshalAs(UnmanagedType.U4)] Int32 Version,
+            ref IntPtr ppSessionInfo,
+            [MarshalAs(UnmanagedType.U4)] ref Int32 pCount);
+
+        [DllImport("wtsapi32.dll")]
+        static extern void WTSFreeMemory(IntPtr pMemory);
+
+        [DllImport("wtsapi32.dll")]
+        static extern bool WTSQuerySessionInformation(
+            IntPtr hServer, int sessionId, WTS_INFO_CLASS wtsInfoClass, out IntPtr ppBuffer, out uint pBytesReturned);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WTS_SESSION_INFO
+        {
+            public Int32 SessionID;
+
+            [MarshalAs(UnmanagedType.LPStr)]
+            public string pWinStationName;
+
+            public WTS_CONNECTSTATE_CLASS State;
+        }
+
+        public enum WTS_INFO_CLASS
+        {
+            WTSInitialProgram,
+            WTSApplicationName,
+            WTSWorkingDirectory,
+            WTSOEMId,
+            WTSSessionId,
+            WTSUserName,
+            WTSWinStationName,
+            WTSDomainName,
+            WTSConnectState,
+            WTSClientBuildNumber,
+            WTSClientName,
+            WTSClientDirectory,
+            WTSClientProductId,
+            WTSClientHardwareId,
+            WTSClientAddress,
+            WTSClientDisplay,
+            WTSClientProtocolType
+        }
+
+        public enum WTS_CONNECTSTATE_CLASS
+        {
+            WTSActive,
+            WTSConnected,
+            WTSConnectQuery,
+            WTSShadow,
+            WTSDisconnected,
+            WTSIdle,
+            WTSListen,
+            WTSReset,
+            WTSDown,
+            WTSInit
+        }
         [DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
 
         //https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/nf-lmwksta-netwkstauserenum
@@ -163,7 +229,7 @@ namespace LACheck
         }
 
         //http://www.pinvoke.net/default.aspx/netapi32.netwkstauserenum
-        public static void GetLoggedOnUsers(string hostName, bool verbose)
+        public static void GetLoggedOnUsers(string hostname, bool verbose)
         {
 
             IntPtr bufptr = IntPtr.Zero;
@@ -181,7 +247,7 @@ namespace LACheck
                 //https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/nf-lmwksta-netwkstauserenum
                 //Lists users currently logged onto host
                 //includes interactive, service, and batch logons
-                nStatus = NetWkstaUserEnum(hostName, 1, out bufptr, 32768, out dwEntriesread, out dwTotalentries, ref dwResumehandle);
+                nStatus = NetWkstaUserEnum(hostname, 1, out bufptr, 32768, out dwEntriesread, out dwTotalentries, ref dwResumehandle);
 
                 // If the call succeeds,
                 if ((nStatus == NERR_SUCCESS) | (nStatus == ERROR_MORE_DATA))
@@ -202,7 +268,7 @@ namespace LACheck
                         loggedOnUsers = loggedOnUsers.Distinct().ToList();
                         foreach (string user in loggedOnUsers)
                         {
-                            Console.WriteLine("[session] {0} - {1}", hostName, user);
+                            Console.WriteLine("[session] {0} - {1}", hostname, user);
                         }
                     }
                     else
@@ -218,6 +284,71 @@ namespace LACheck
                     NetApiBufferFree(bufptr);
 
             } while (nStatus == ERROR_MORE_DATA);
+        }
+        public static void GetRDPUsers(string hostname, bool verbose)
+        {
+            IntPtr serverHandle = IntPtr.Zero;
+            List<string> resultList = new List<string>();
+            serverHandle = WTSOpenServer(hostname);
+
+            try
+            {
+                IntPtr sessionInfoPtr = IntPtr.Zero;
+                IntPtr userPtr = IntPtr.Zero;
+                IntPtr domainPtr = IntPtr.Zero;
+                Int32 sessionCount = 0;
+                Int32 retVal = WTSEnumerateSessions(serverHandle, 0, 1, ref sessionInfoPtr, ref sessionCount);
+                Int32 dataSize = Marshal.SizeOf(typeof(WTS_SESSION_INFO));
+                IntPtr currentSession = sessionInfoPtr;
+                uint bytes = 0;
+                List<string> sessions = new List<string>();
+                string username = "";
+
+                if (retVal != 0)
+                {
+                    //collect sessions - may contain duplicates
+                    for (int i = 0; i < sessionCount; i++)
+                    {
+                        WTS_SESSION_INFO si = (WTS_SESSION_INFO)Marshal.PtrToStructure((System.IntPtr)currentSession, typeof(WTS_SESSION_INFO));
+                        currentSession += dataSize;
+
+                        WTSQuerySessionInformation(serverHandle, si.SessionID, WTS_INFO_CLASS.WTSUserName, out userPtr, out bytes);
+                        WTSQuerySessionInformation(serverHandle, si.SessionID, WTS_INFO_CLASS.WTSDomainName, out domainPtr, out bytes);
+                        username = Marshal.PtrToStringAnsi(domainPtr) + "\\" + Marshal.PtrToStringAnsi(userPtr);
+                        //Console.WriteLine(String.IsNullOrEmpty(Marshal.PtrToStringAnsi(userPtr)) + " " + Marshal.PtrToStringAnsi(userPtr));
+                        //if username is not null AND is not in the list of sessions, then add it
+                        if (!String.IsNullOrEmpty(Marshal.PtrToStringAnsi(userPtr)))// && !sessions.Contains(username))
+                        {
+                            sessions.Add(username);
+                        }
+                        //Console.WriteLine("Domain and User: " + Marshal.PtrToStringAnsi(domainPtr) + "\\" + Marshal.PtrToStringAnsi(userPtr));
+                        WTSFreeMemory(userPtr);
+                        WTSFreeMemory(domainPtr);
+                    }
+
+                    WTSFreeMemory(sessionInfoPtr);
+                }
+                //remove duplicate sessions
+                sessions = sessions.Distinct().ToList();
+                foreach (string session in sessions)
+                {
+                    Console.WriteLine("[rdp] {0} - {1}", hostname, session);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (verbose)
+                {
+                    Console.WriteLine("[!] RDP Session Collection Error: {0}", ex.Message);
+                }
+                WTSCloseServer(serverHandle);
+                Environment.Exit(0);
+            }
+            finally
+            {
+                WTSCloseServer(serverHandle);
+            }
+
         }
         public static List<string> SearchOU(string ou, bool verbose)
         {
@@ -402,6 +533,7 @@ namespace LACheck
                 if (logons)
                 {
                     GetLoggedOnUsers(host, verbose);
+                    GetRDPUsers(host, verbose);
                 }
             }
             catch (Exception ex)
