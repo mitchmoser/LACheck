@@ -59,6 +59,7 @@ execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc 
 [session] WEB01 - contoso\devadmin
 [session] WEB01 - contoso\devuser
 [session] WEB01 - contoso\WEB01$
+[rdp] WEB01 - contoso\devadmin
 [RPC] Admin Success: WEB01
 [WinRM] Admin Success: DESKTOP-118GDCE
 [WinRM] Admin Success: DEV02.contoso.com
