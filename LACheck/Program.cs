@@ -416,7 +416,7 @@ namespace LACheck
 
                         // remove preceding "WTS" of status returned from WTS_CONNECTSTATE_CLASS
                         string status = String.Concat(si.State.ToString().Skip(3));
-                        rdpSession = String.Format("{0}\\{1} rdp-tcp#{2} {3} Last Connection: {4} Last Input: {5}", domain, username, si.SessionID, status, lastSession.ToString("hh':'mm':'ss"), idleTime.ToString("hh':'mm':'ss"));
+                        rdpSession = String.Format("{0}\\{1} rdp-tcp#{2} {3} Last Connection: {4} Last Input: {5}", domain, username, si.SessionID, status, lastSession.ToString("dd':'hh':'mm':'ss"), idleTime.ToString("dd':'hh':'mm':'ss"));
                         //if username is not null
                         if (!String.IsNullOrEmpty(Marshal.PtrToStringAnsi(userPtr)))
                         {
@@ -766,8 +766,6 @@ Arguments:
                 {
                     result[parts[0]] = new string[] { parts[1] };
                 }
-                //Console.WriteLine("Argument: {0}", result[parts[0]]);
-                //Console.WriteLine("Value: {0}", result[parts[0]][0]);
             }
             return result;
         }
