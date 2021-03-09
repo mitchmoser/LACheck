@@ -50,7 +50,7 @@ namespace LACheck.Utilities
             try
             {
                 List<string> ComputerNames = new List<string>();
-
+                string description = "";
                 DirectoryEntry entry = new DirectoryEntry();
                 DirectorySearcher mySearcher = new DirectorySearcher(entry);
                 mySearcher.PropertiesToLoad.Add("samaccountname");
@@ -59,24 +59,24 @@ namespace LACheck.Utilities
                 switch (filter)
                 {
                     case "all":
-                        //All enabled computers with "primary" group "Domain Computers"
+                        description = "all enabled computers with \"primary\" group \"Domain Computers\"";
                         mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))");
                         break;
                     case "dc":
-                        //All enabled Domain Controllers
+                        description = "all enabled Domain Controllers (not read-only DCs)";
                         mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(userAccountControl:1.2.840.113556.1.4.803:=8192))");
                         break;
                     case "exclude-dc":
-                        //All enabled computers that are not Domain Controllers
-                        mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(!(userAccountControl:1.2.840.113556.1.4.803:=8192)))");
+                        description = "all enabled computers that are not Domain Controllers or read-only DCs";
+                        mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(!(userAccountControl:1.2.840.113556.1.4.803:=8192))(!(userAccountControl:1.2.840.113556.1.4.803:=67100867)))");
                         break;
                     case "servers":
-                        //All enabled servers
+                        description = "all enabled servers";
                         mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(operatingSystem=*server*))");
                         break;
                     case "servers-exclude-dc":
-                        //All enabled servers excluding DCs
-                        mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(operatingSystem=*server*)(!(userAccountControl:1.2.840.113556.1.4.803:=8192)))");
+                        description = "all enabled servers excluding Domain Controllers or read-only DCs";
+                        mySearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(operatingSystem=*server*)(!(userAccountControl:1.2.840.113556.1.4.803:=8192))(!(userAccountControl:1.2.840.113556.1.4.803:=67100867)))");
                         break;
                     default:
                         Console.WriteLine("[!] Invalid LDAP filter: {0}", filter);
@@ -87,6 +87,8 @@ namespace LACheck.Utilities
 
                 mySearcher.SizeLimit = int.MaxValue;
                 mySearcher.PageSize = int.MaxValue;
+                Console.WriteLine("[+] Performing LDAP query for {0}...", description);
+                Console.WriteLine("[+] This may take some time depending on the size of the environment");
                 foreach (SearchResult resEnt in mySearcher.FindAll())
                 {
                     string ComputerName = resEnt.GetDirectoryEntry().Name;

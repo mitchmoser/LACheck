@@ -53,10 +53,10 @@ Arguments:
                 ex: ""OU=Special Servers,DC=example,DC=local""
     /ldap - query hosts from the following LDAP filters:
          :all - All enabled computers with 'primary' group 'Domain Computers'
-         :dc - All enabled Domain Controllers
-         :exclude-dc - All enabled computers that are not Domain Controllers
+         :dc  - All enabled Domain Controllers (not read-only DCs)
+         :exclude-dc - All enabled computers that are not Domain Controllers or read-only DCs
          :servers - All enabled servers
-         :servers-exclude-dc - All enabled servers excluding DCs
+         :servers-exclude-dc - All enabled servers excluding Domain Controllers or read-only DCs
 ";
             Console.WriteLine(usageString);
         }
