@@ -42,7 +42,7 @@ execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc 
 ```
 ### Output
 ```
-[*] Tasked beacon to run .NET program: LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /logons /threads:10 /validate /verbose
+[*] Tasked beacon to run .NET program: LACheck smb rpc winrm /ldap:servers-exclude-dc /targets:WEB01,DEV02.contoso.com,10.10.10.10 /logons /threads:10 /verbose
 [+] host called home, sent: 111705 bytes
 [+] received Output
 [+] Parsed Aguments:
@@ -59,7 +59,8 @@ execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc 
         /validate: true
         /verbose: true
         /threads: 10
-[+] Credentials Validated on Domain
+[+] Performing LDAP query all enabled servers excluding Domain Controllers or read-only DCs...
+[+] This may take some time depending on the size of the environment
 [+] LDAP Search Results: 2
 [SMB] Admin Success: WEB01
 [session] WEB01 - contoso\devadmin
