@@ -20,10 +20,11 @@ Local Admin Checks:
     winrm - Attempts WMI query of Win32_ComputerSystem Class Provider over WinRM Session
 
 Arguments:
-    /logons   - return logged on users on a host (requires SMB or WMI)
-    /registry - enumerate sessions from registry hive (requires SMB)
-    /services - return services running as users (requires SMB or WMI)
-    /targets  - comma-separated list of hostnames to check. If none provided, localhost will be checked.
+    /edr      - check host for EDR (requires smb, rpc, or winrm)
+    /logons   - return logged on users on a host (requires smb, rpc, or winrm)
+    /registry - enumerate sessions from registry hive (requires smb)
+    /services - return services running as users (requires smb, rpc, or winrm)
+    /targets  - comma-separated list of hostnames to check
     /threads  - specify maximum number of parallel threads (default=25)
     /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
     /verbose  - print additional logging information
@@ -93,13 +94,23 @@ All hosts returned from these flags are combined and deduplicated before enumera
 ## Performance Summary
 | | SMB | WMI | WinRM |
 --- | --- | --- | ---
-|/logons|fast|fast| - |
-|/services|slow|fast| - |
-|/registry|slow| - | - 
+|/edr|fast|fast| fast |
+|/logons|fast|fast| fast |
+|/services|slow|fast| fast |
+|/registry|slow| - | - |
 
 \- = not implemented
 
 ## SMB
+### /edr
+Inspired by [harleyQu1nn's EDR.cna script](https://github.com/harleyQu1nn/AggressorScripts/blob/master/EDR.cna)
+
+[Directory.GetFiles](https://docs.microsoft.com/en-us/dotnet/api/system.io.directory.getfiles) Method returns a list of drivers from:
+- \\host\C$\windows\system32\drivers
+- \\host\C$\windows\sysnative\drivers
+
+Drivers are looked up against a list of known drivers used by EDR vendors.
+
 ### /logons
 [NetWkstaUserEnum](https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/nf-lmwksta-netwkstauserenum) returns a list of users with interactive, service and batch logons
 
@@ -125,9 +136,22 @@ Each service is queried to determine the user it is configured to run as.
 
 Due to each service having to be queried individually, this method may be slower compared to alternative techniques. `wmi /services` is faster
 ## WMI
+### /edr
+Inspired by [harleyQu1nn's EDR.cna script](https://github.com/harleyQu1nn/AggressorScripts/blob/master/EDR.cna)
+
+[CIM_DataFile class](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/cim-datafile) returns a list of drivers from:
+- \\host\C$\windows\system32\drivers
+- \\host\C$\windows\sysnative\drivers
+
+Drivers are looked up against a list of known drivers used by EDR vendors.
 ### /logons
 [Win32_LoggedOnUser class](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-loggedonuser) returns a list of logged on sessions
 [Win32_LogonSession class](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-logonsession) returns detailed information for each session
 
 ### /services
 Queries the [Win32_Service class](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-service) to retrieve the name, user, and state of services
+
+## WinRM
+Each WMI checks is also implemented using [WMI Resources](https://docs.microsoft.com/en-us/windows/win32/winrm/querying-for-specific-instances-of-a-resource) and [WMI Enumeration](https://docs.microsoft.com/en-us/windows/win32/api/wsmandisp/nf-wsmandisp-iwsmansession-enumerate) over WinRM.
+
+This avoids the use of PowerShell runspaces. 
