@@ -59,7 +59,6 @@ namespace LACheck
                 if (arguments.rpc)
                 {
                     // Note that we create the Action here, but do not start it.
-                    //listOfChecks.Add(() => Enums.WMI.Check(host, ns, wql, arguments.logons, arguments.services, arguments.verbose));
                     listOfChecks.Add(() => Enums.WMI.Check(host, ns, wql, arguments));
                 }
                 if (arguments.smb)

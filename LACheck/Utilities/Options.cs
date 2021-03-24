@@ -44,11 +44,11 @@ Local Admin Checks:
     winrm - Attempts WMI query of Win32_ComputerSystem Class Provider over WinRM Session
 
 Arguments:
-    /edr      - check host for EDR (requires SMB)
-    /logons   - return logged on users on a host (requires SMB or WMI)
-    /registry - enumerate sessions from registry hive (requires SMB)
-    /services - return services running as users (requires SMB or WMI)
-    /targets  - comma-separated list of hostnames to check. If none provided, localhost will be checked.
+    /edr      - check host for EDR (requires smb, rpc, or winrm)
+    /logons   - return logged on users on a host (requires smb, rpc, or winrm)
+    /registry - enumerate sessions from registry hive (requires smb)
+    /services - return services running as users (requires smb, rpc, or winrm)
+    /targets  - comma-separated list of hostnames to check
     /threads  - specify maximum number of parallel threads (default=25)
     /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
     /verbose  - print additional logging information
