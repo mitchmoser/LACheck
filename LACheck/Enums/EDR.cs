@@ -250,59 +250,6 @@ namespace LACheck.Enums
                     Console.WriteLine("[!] {0} - Unable to query drivers over WinRM: {1}", host, ex.Message);
                 }
             }
-            /*
-            ManagementScope scope = new ManagementScope(string.Format(@"\\{0}\{1}", host, ns));
-
-            //https://docs.microsoft.com/en-us/windows/win32/wmisdk/wql-operators
-            //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/cim-datafile
-
-            SelectQuery query = new SelectQuery(@"Select * from CIM_DataFile where (Path = '\\windows\\system32\\drivers\\' OR Path = '\\windows\\sysnative\\drivers\\') AND Extension = 'sys'");
-
-            try
-            {
-                scope.Connect();
-                //https://stackoverflow.com/questions/842533/in-c-sharp-how-do-i-query-the-list-of-running-services-on-a-windows-server
-                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query))
-                {
-                    ManagementObjectCollection paths = searcher.Get();
-                    List<string> drivers = new List<string>();
-                    List<string> matches = new List<string>();
-
-                    //WMI Query gets full path of each match
-                    foreach (ManagementObject path in paths)
-                    {
-                        //remove the path from each driver
-                        drivers.Add(Path.GetFileName(path["Name"].ToString().ToLower()));
-                    }
-
-                    foreach (string driver in drivers)
-                    {
-                        if (EDRList.ContainsKey(driver))
-                        {
-                            matches.Add(EDRList[driver]);
-                        }
-                    }
-                    //dedup list of matches
-                    matches = matches.Distinct().ToList();
-
-                    if (matches.Any())
-                    {
-                        Console.WriteLine("[EDR] {0} - Found: {1}", host, String.Join(", ", matches.ToArray()));
-                    }
-                    else
-                    {
-                        Console.WriteLine("[EDR] {0} - no EDR found", host);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                if (verbose)
-                {
-                    Console.WriteLine("[!] {0} - Unable to query drivers: {1}", host, ex.Message);
-                }
-            }
-            */
         }
         public static void EDRCheckWMI(string host, string ns, bool verbose)
         {
