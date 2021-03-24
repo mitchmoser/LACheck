@@ -4,6 +4,9 @@ using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.ServiceProcess;
+using System.Xml.Linq;
+using WSManAutomation; //Add Reference -> windows\system32\wsmauto.dll (or COM: Microsoft WSMan Automation V 1.0 Library)
+
 
 namespace LACheck.Enums
 {
@@ -132,6 +135,53 @@ namespace LACheck.Enums
                 }
             }
         }
+        public static void GetServicesWinRM(string host, bool verbose)
+        {
+            try
+            {
+                //https://bohops.com/2020/05/12/ws-management-com-another-approach-for-winrm-lateral-movement/
+                //https://github.com/bohops/WSMan-WinRM/blob/master/SharpWSManWinRM.cs
+                IWSManEx wsman = new WSMan();
+                IWSManConnectionOptions options = (IWSManConnectionOptions)wsman.CreateConnectionOptions();
+                IWSManSession winrm = (IWSManSession)wsman.CreateSession(host, 0, options);
+
+                //https://docs.microsoft.com/en-us/windows/win32/winrm/querying-for-specific-instances-of-a-resource
+                //https://stackoverflow.com/questions/29645896/how-to-retrieve-cim-instances-from-a-linux-host-using-winrm
+                //https://docs.microsoft.com/en-us/windows/win32/wmisdk/wql-operators
+                //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-service
+                string resource = "http://schemas.microsoft.com/wbem/wsman/1/wmi/root/cimv2/*";
+                string wql = "SELECT name,displayname,startname,state,systemname FROM Win32_Service WHERE startname IS NOT NULL";
+                string dialect = "http://schemas.microsoft.com/wbem/wsman/1/WQL";
+                IWSManEnumerator response = winrm.Enumerate(resource, wql, dialect);
+                // Enumerate returned CIM instances.
+                while (!response.AtEndOfStream)
+                {
+                    string item = response.ReadItem();
+                    XDocument doc = XDocument.Parse(item);
+                    string startName = doc.Descendants("StartName").First().Value;
+                    // Exclude services running as local accounts
+                    if (!exclusions.Contains(startName.ToUpper()))
+                    {
+                        string systemName = doc.Descendants("SystemName").First().Value;
+                        string name = doc.Descendants("Name").First().Value;
+                        string state = doc.Descendants("State").First().Value;
+                        Console.WriteLine("[service] {0} - {1} Service: {2} State: {3}",
+                                           systemName,
+                                           startName,
+                                           name,
+                                           state
+                                         );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                if (verbose)
+                {
+                    Console.WriteLine("[!] {0} - Unable to query services over WinRM: {1}", host, ex.Message);
+                }
+            }
+        }
         public static void GetServicesWMI(string host, string ns, bool verbose)
         {
             ManagementScope scope = new ManagementScope(string.Format(@"\\{0}\{1}", host, ns));
@@ -166,7 +216,7 @@ namespace LACheck.Enums
             {
                 if (verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query services: {1}", host, ex.Message);
+                    Console.WriteLine("[!] {0} - Unable to query services over WMI: {1}", host, ex.Message);
                 }
             }
         }

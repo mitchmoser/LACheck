@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Linq;
 
+
 namespace LACheck.Utilities
 {
     class LDAP

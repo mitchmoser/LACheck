@@ -1,35 +1,39 @@
 ﻿using System;
 using System.IO;
-using System.ServiceProcess;
+
 
 namespace LACheck.Enums
 {
     class SMB
     {
-        public static void Check(string host, bool logons, bool registry, bool services, bool verbose)
+        public static void Check(string host, Utilities.Arguments arguments)
         {
             try
             {
                 string share = "\\\\" + host + "\\C$";
                 System.Security.AccessControl.DirectorySecurity ds = Directory.GetAccessControl(share);
                 Console.WriteLine("[SMB] Admin Success: {0}", host);
-                if (logons)
+                if (arguments.edr)
                 {
-                    Enums.NetLogons.GetLoggedOnUsers(host, verbose);
-                    Enums.RDP.GetRDPUsers(host, verbose);
+                    Enums.EDR.EDRCheckSMB(host);
                 }
-                if (services)
+                if (arguments.logons)
                 {
-                    Enums.Services.GetServicesSMB(host, verbose);
+                    Enums.NetLogons.GetLoggedOnUsers(host, arguments.verbose);
+                    Enums.RDP.GetRDPUsers(host, arguments.verbose);
                 }
-                if (registry)
+                if (arguments.services)
                 {
-                    Enums.Registry.RegistryCheck(host, verbose);
+                    Enums.Services.GetServicesSMB(host, arguments.verbose);
+                }
+                if (arguments.registry)
+                {
+                    Enums.Registry.RegistryCheck(host, arguments.verbose);
                 }
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
                     Console.WriteLine("[!] SMB on {0} - {1}", host, ex.Message.Trim());
                 }

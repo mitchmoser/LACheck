@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.DirectoryServices.AccountManagement;
 
+
 namespace LACheck.Utilities
 {
     //default values off all arguments
     public class Arguments
     {
+        public bool edr = false;
         public bool help = false;
         public bool logons = false;
         public bool rpc = false;
@@ -42,6 +44,7 @@ Local Admin Checks:
     winrm - Attempts WMI query of Win32_ComputerSystem Class Provider over WinRM Session
 
 Arguments:
+    /edr      - check host for EDR (requires SMB)
     /logons   - return logged on users on a host (requires SMB or WMI)
     /registry - enumerate sessions from registry hive (requires SMB)
     /services - return services running as users (requires SMB or WMI)
@@ -65,7 +68,7 @@ Arguments:
 
             Dictionary<string, string[]> result = new Dictionary<string, string[]>();
             //these boolean variables aren't passed w/ values. If passed, they are "true"
-            string[] booleans = new string[] { "/logons", "/registry", "/services", "smb","winrm", "wmi", "/validate", "/verbose" };
+            string[] booleans = new string[] { "/edr", "/logons", "/registry", "/services", "smb","winrm", "wmi", "/validate", "/verbose" };
             
             //stores the arguments provided by user
             var argList = new List<string>();
@@ -92,6 +95,10 @@ Arguments:
         public static Arguments ArgumentValues(Dictionary<string, string[]> parsedArgs)
         {
             Arguments arguments = new Arguments();
+            if (parsedArgs.ContainsKey("/edr"))
+            {
+                arguments.edr = Convert.ToBoolean(parsedArgs["/edr"][0]);
+            }
             if (parsedArgs.ContainsKey("/logons"))
             {
                 arguments.logons = Convert.ToBoolean(parsedArgs["/logons"][0]);
@@ -159,6 +166,7 @@ Arguments:
             Console.WriteLine("\trpc: {0}", args.rpc);
             Console.WriteLine("\tsmb: {0}", args.smb);
             Console.WriteLine("\twinrm: {0}", args.winrm);
+            Console.WriteLine("\t/edr: {0}", args.edr);
             Console.WriteLine("\t/logons: {0}", args.logons);
             Console.WriteLine("\t/registry: {0}", args.registry);
             Console.WriteLine("\t/services: {0}", args.services);

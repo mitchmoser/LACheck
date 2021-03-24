@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Management;
 
+
 namespace LACheck.Enums
 {
     class WMI
     {
-        public static void Check(string host, string ns, string wql, bool logons, bool services, bool verbose)
+        public static void Check(string host, string ns, string wql, Utilities.Arguments arguments)
         {
             try
             {
@@ -17,19 +18,23 @@ namespace LACheck.Enums
                     ManagementObjectCollection test = searcher.Get();
                 }
                 Console.WriteLine("[RPC] Admin Success: {0}", host);
-                if (logons)
+                if (arguments.edr)
                 {
-                    Enums.LogonSessions.GetSessions(host, ns, verbose);
+                    Enums.EDR.EDRCheckWMI(host, ns, arguments.verbose);
                 }
-                if (services)
+                if (arguments.logons)
                 {
-                    Enums.Services.GetServicesWMI(host, ns, verbose);
+                    Enums.LogonSessions.GetSessionsWMI(host, ns, arguments.verbose);
+                }
+                if (arguments.services)
+                {
+                    Enums.Services.GetServicesWMI(host, ns, arguments.verbose);
                 }
 
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
                     Console.WriteLine("[!] RPC on {0} - {1}", host, ex.Message.Trim());
                 }

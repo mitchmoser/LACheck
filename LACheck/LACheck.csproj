@@ -55,9 +55,11 @@
     <Reference Include="System.Management" />
     <Reference Include="System.Security" />
     <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.XML" />
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Enums\EDR.cs" />
     <Compile Include="Enums\Registry.cs" />
     <Compile Include="Enums\LogonSessions.cs" />
     <Compile Include="Enums\Services.cs" />

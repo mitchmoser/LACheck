@@ -3,11 +3,12 @@ using System.Linq;
 using System.Xml.Linq;
 using WSManAutomation; //Add Reference -> windows\system32\wsmauto.dll (or COM: Microsoft WSMan Automation V 1.0 Library)
 
+
 namespace LACheck.Enums
 {
     class WINRM
     {
-        public static void Check(string host, string wql, bool verbose)
+        public static void Check(string host, string ns, string wql, Utilities.Arguments arguments)
         {
             try
             {
@@ -38,15 +39,27 @@ namespace LACheck.Enums
                 if (results != "")
                 {
                     Console.WriteLine("[WinRM] Admin Success: {0}", host);
+                    if (arguments.edr)
+                    {
+                        Enums.EDR.EDRCheckWinRM(host, arguments.verbose);
+                    }
+                    if (arguments.logons)
+                    {
+                        Enums.LogonSessions.GetSessionsWinRM(host, arguments.verbose);
+                    }
+                    if (arguments.services)
+                    {
+                        Enums.Services.GetServicesWinRM(host, arguments.verbose);
+                    }
                 }
-                if (verbose && results == "")
+                if (arguments.verbose && results == "")
                 {
                     Console.WriteLine("[!] WinRM no response for query on {0}", host);
                 }
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
                     Console.WriteLine("[!] WinRM on {0} - {1}", host, ex.Message.Trim());
                 }

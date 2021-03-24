@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
+
 
 namespace LACheck
 {
@@ -59,15 +59,16 @@ namespace LACheck
                 if (arguments.rpc)
                 {
                     // Note that we create the Action here, but do not start it.
-                    listOfChecks.Add(() => Enums.WMI.Check(host, ns, wql, arguments.logons, arguments.services, arguments.verbose));
+                    //listOfChecks.Add(() => Enums.WMI.Check(host, ns, wql, arguments.logons, arguments.services, arguments.verbose));
+                    listOfChecks.Add(() => Enums.WMI.Check(host, ns, wql, arguments));
                 }
                 if (arguments.smb)
                 {
-                    listOfChecks.Add(() => Enums.SMB.Check(host, arguments.logons, arguments.registry, arguments.services, arguments.verbose));
+                    listOfChecks.Add(() => Enums.SMB.Check(host, arguments));
                 }
                 if (arguments.winrm)
                 {
-                    listOfChecks.Add(() => Enums.WINRM.Check(host, wql, arguments.verbose));
+                    listOfChecks.Add(() => Enums.WINRM.Check(host, ns, wql, arguments));
                 }
             }
             //https://devblogs.microsoft.com/pfxteam/parallel-invoke-vs-explicit-task-management/
