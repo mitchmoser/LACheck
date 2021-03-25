@@ -50,6 +50,7 @@ execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc 
         rpc: True
         smb: False
         winrm: False
+        /edr: False
         /logons: True
         /registry: False
         /services: False
@@ -106,8 +107,8 @@ All hosts returned from these flags are combined and deduplicated before enumera
 Inspired by [harleyQu1nn's EDR.cna script](https://github.com/harleyQu1nn/AggressorScripts/blob/master/EDR.cna)
 
 [Directory.GetFiles](https://docs.microsoft.com/en-us/dotnet/api/system.io.directory.getfiles) Method returns a list of drivers from:
-- \\host\C$\windows\system32\drivers
-- \\host\C$\windows\sysnative\drivers
+- \\\\host\C$\windows\system32\drivers
+- \\\\host\C$\windows\sysnative\drivers
 
 Drivers are looked up against a list of known drivers used by EDR vendors.
 
