@@ -98,7 +98,7 @@ All hosts returned from these flags are combined and deduplicated before enumera
 |/edr|fast|fast| fast |
 |/logons|fast|fast| fast |
 |/services|slow|fast| fast |
-|/registry|slow| - | - |
+|/registry|slow| fast | - |
 
 \- = not implemented
 
@@ -151,6 +151,11 @@ Drivers are looked up against a list of known drivers used by EDR vendors.
 
 ### /services
 Queries the [Win32_Service class](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-service) to retrieve the name, user, and state of services
+
+### /registry
+Queries the [Win32_UserProfile class](https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ee886409(v=vs.85)) to retrieve SIDs for user profiles on a system.
+
+The [EnumKey method of the StdRegProv class](https://docs.microsoft.com/en-us/previous-versions/windows/desktop/regprov/enumkey-method-in-class-stdregprov) retrieves the `\\Computer\HKEY_USERS\` hive and attempts to access `Volatile Environment` for each returned SID to retrieve values from the `USERDOMAIN` and `USERNAME` keys.
 
 ## WinRM
 Each WMI checks is also implemented using [WMI Resources](https://docs.microsoft.com/en-us/windows/win32/winrm/querying-for-specific-instances-of-a-resource) and [WMI Enumeration](https://docs.microsoft.com/en-us/windows/win32/api/wsmandisp/nf-wsmandisp-iwsmansession-enumerate) over WinRM.
