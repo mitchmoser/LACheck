@@ -26,6 +26,10 @@ namespace LACheck.Enums
                 {
                     Enums.LogonSessions.GetSessionsWMI(host, ns, arguments.verbose);
                 }
+                if (arguments.registry)
+                {
+                    Enums.Registry.GetCurrentUsersWMI(host, ns, arguments.verbose);
+                }
                 if (arguments.services)
                 {
                     Enums.Services.GetServicesWMI(host, ns, arguments.verbose);

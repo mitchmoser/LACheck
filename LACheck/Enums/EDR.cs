@@ -144,7 +144,7 @@ namespace LACheck.Enums
 
             try
             {
-                string[] x64fileEntries = Directory.GetFiles(x64path, "*.sys");
+                string[] x64fileEntries = Directory.GetFiles(x64path, "*.sys", SearchOption.AllDirectories);
                 //strip out file path
                 foreach (string file in x64fileEntries)
                     drivers.Add(Path.GetFileName(file).ToLower().ToLower());
@@ -153,7 +153,7 @@ namespace LACheck.Enums
 
             try
             {
-                string[] x86fileEntries = Directory.GetFiles(x86path, "*.sys");
+                string[] x86fileEntries = Directory.GetFiles(x86path, "*.sys", SearchOption.AllDirectories);
                 //strip out file path
                 foreach (string file in x86fileEntries)
                     drivers.Add(Path.GetFileName(file).ToLower());                
@@ -208,7 +208,7 @@ namespace LACheck.Enums
                 //https://docs.microsoft.com/en-us/windows/win32/wmisdk/wql-operators
                 //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/cim-datafile
                 string resource = "http://schemas.microsoft.com/wbem/wsman/1/wmi/root/cimv2/*";
-                string wql = @"Select name from CIM_DataFile where (Path = '\\windows\\system32\\drivers\\' OR Path = '\\windows\\sysnative\\drivers\\') AND Extension = 'sys'";
+                string wql = @"Select name from CIM_DataFile where (Path LIKE '\\windows\\system32\\drivers\\%' OR Path LIKE '\\windows\\sysnative\\drivers\\%') AND Extension = 'sys' AND Drive = 'C:'";
                 string dialect = "http://schemas.microsoft.com/wbem/wsman/1/WQL";
                 IWSManEnumerator response = winrm.Enumerate(resource, wql, dialect);
                 // Enumerate returned CIM instances.
@@ -258,7 +258,7 @@ namespace LACheck.Enums
             //https://docs.microsoft.com/en-us/windows/win32/wmisdk/wql-operators
             //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/cim-datafile
 
-            SelectQuery query = new SelectQuery(@"Select name from CIM_DataFile where (Path = '\\windows\\system32\\drivers\\' OR Path = '\\windows\\sysnative\\drivers\\') AND Extension = 'sys'");
+            SelectQuery query = new SelectQuery(@"Select name from CIM_DataFile where (Path LIKE '\\windows\\system32\\drivers\\%' OR Path LIKE '\\windows\\sysnative\\drivers\\%') AND Extension = 'sys' AND Drive = 'C:'");
 
             try
             {

@@ -47,6 +47,11 @@ namespace LACheck.Enums
                     {
                         Enums.LogonSessions.GetSessionsWinRM(host, arguments.verbose);
                     }
+                    if (arguments.registry)
+                    {
+                        //unfinished
+                        //Enums.Registry.GetCurrentUsersWinRM(host, arguments.verbose);
+                    }
                     if (arguments.services)
                     {
                         Enums.Services.GetServicesWinRM(host, arguments.verbose);
