@@ -219,43 +219,6 @@ namespace LACheck.Enums
                     Console.WriteLine("[!] {0} - Unable to query registry over WMI: {1}", host, ex.Message);
                 }
             }
-            //try
-            //{
-            /* https://docs.microsoft.com/en-us/dotnet/api/microsoft.win32.registryhive
-             * iterate through SIDs in "\\Computer\HKEY_USERS\" hive
-             * attempt to access "Volatile Environment" for each SID
-             * get values from USERDOMAIN and USERNAME keys
-            */
-            /*
-            RegistryKey baseKey = RegistryKey.OpenRemoteBaseKey(RegistryHive.Users, host);
-            string[] sids = baseKey.GetSubKeyNames();
-            foreach (string sid in sids)
-            {
-                string target = sid + "\\Volatile Environment";
-                try
-                {
-                    RegistryKey key = baseKey.OpenSubKey(target);
-                    string domain = key.GetValue("USERDOMAIN").ToString();
-                    string username = key.GetValue("USERNAME").ToString();
-                    Console.WriteLine("[registry] {0} - {1}\\{2}", host, domain, username);
-                }
-                catch
-                {
-                    // if the SID doesn't have "Volatile Environment" no biggie, onto the next
-                    continue;
-                }
-            }
-            baseKey.Close();
-
-        }
-        catch (Exception ex)
-        {
-            if (verbose)
-            {
-                Console.WriteLine("[!] {0} - Registry error: {1}", host, ex.Message.Trim());
-            }
-        }
-            */
         }
     }
 }
