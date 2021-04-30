@@ -111,31 +111,40 @@ namespace LACheck.Enums
         private const uint SERVICE_QUERY_CONFIG = 0x00000001;
         private const uint SERVICE_CHANGE_CONFIG = 0x00000002;
         private const uint SC_MANAGER_ALL_ACCESS = 0x000F003F;
-        public static void GetServicesSMB(string host, bool verbose)
+        public static void GetServicesSMB(string host, Utilities.Arguments arguments)
         {
+            Utilities.SessionInfo.ComputerSessions computer = new Utilities.SessionInfo.ComputerSessions();
+            computer.hostname = host;
+
             try
             {
                 ServiceController[] services = ServiceController.GetServices(host);
                 foreach (ServiceController service in services)
                 {
                     //get user running service
-                    ServiceInfo svcInfo = GetServiceInfo(service.ServiceName, host, verbose);
+                    ServiceInfo svcInfo = GetServiceInfo(service.ServiceName, host, arguments);
                     if (!String.IsNullOrEmpty(svcInfo.startName) && !exclusions.Contains(svcInfo.startName.ToUpper()))
                     {
-                        Console.WriteLine("[service] {0} - {1} Service: {2} State: {3}", host, svcInfo.startName, service.ServiceName, service.Status);
+                        Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
+                        storedSession.username = svcInfo.startName.Split('@')[0];
+                        string domain = svcInfo.startName.Split('@')[1].Split('.')[svcInfo.startName.Split('@')[1].Split('.').Length - 2];
+                        storedSession.domain = domain;
+                        computer.sessions.Add(storedSession);
+                        Console.WriteLine($"[service] {host} - {svcInfo.startName} Service: {service.ServiceName} State: {service.Status} ({arguments.user})");
                     }
                 }
                 
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query services: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to query services: {ex.Message}");
                 }
             }
+            Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
         }
-        public static void GetServicesWinRM(string host, bool verbose)
+        public static void GetServicesWinRM(string host, Utilities.Arguments arguments)
         {
             try
             {
@@ -165,24 +174,19 @@ namespace LACheck.Enums
                         string systemName = doc.Descendants("SystemName").First().Value;
                         string name = doc.Descendants("Name").First().Value;
                         string state = doc.Descendants("State").First().Value;
-                        Console.WriteLine("[service] {0} - {1} Service: {2} State: {3}",
-                                           systemName,
-                                           startName,
-                                           name,
-                                           state
-                                         );
+                        Console.WriteLine($"[service] {systemName} - {startName} Service: {name} State: {state} ({arguments.user})");
                     }
                 }
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query services over WinRM: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to query services over WinRM: {ex.Message}");
                 }
             }
         }
-        public static void GetServicesWMI(string host, string ns, bool verbose)
+        public static void GetServicesWMI(string host, string ns, Utilities.Arguments arguments)
         {
             ManagementScope scope = new ManagementScope(string.Format(@"\\{0}\{1}", host, ns));
 
@@ -202,38 +206,34 @@ namespace LACheck.Enums
                         // Exclude services running as local accounts
                         if (!exclusions.Contains(service["StartName"].ToString().ToUpper()))
                         {
-                            Console.WriteLine("[service] {0} - {1} Service: {2} State: {3}",
-                                               service["SystemName"], 
-                                               service["StartName"], 
-                                               service["Name"],
-                                               service["State"]
-                                             );
+                            Console.WriteLine($"[service] {service["SystemName"]} - {service["StartName"]} Service: {service["Name"]} State: {service["State"]} ({arguments.user})");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query services over WMI: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to query services over WMI: {ex.Message}");
                 }
             }
         }
         //https://bytes.com/topic/c-sharp/answers/227755-servicecontroller-class-startup-type
-        public static ServiceInfo GetServiceInfo(string ServiceName, string host, bool verbose)
+        public static ServiceInfo GetServiceInfo(string ServiceName, string host, Utilities.Arguments arguments)
         {
             ServiceInfo serviceInfo = new ServiceInfo();
             try
             {
                 if (ServiceName.Equals(""))
                     throw new NullReferenceException("ServiceName must contain a valid service name.");
+
                 IntPtr scManager = OpenSCManager(host, null, (int)SCManagerAccess.GENERIC_ALL);
-                if (scManager.ToInt32() <= 0)
+                if (scManager.ToInt64() <= 0)
                     throw new Win32Exception();
 
                 IntPtr service = OpenService(scManager, ServiceName, (int)ServiceAccess.QUERY_CONFIG);
-                if (service.ToInt32() <= 0)
+                if (service.ToInt64() <= 0)
                     throw new NullReferenceException();
 
                 int bytesNeeded = 5;
@@ -250,9 +250,8 @@ namespace LACheck.Enums
                     qscPtr = Marshal.AllocCoTaskMem(bytesNeeded);
                     retCode = QueryServiceConfig(service, qscPtr, bytesNeeded, ref bytesNeeded);
                     if (retCode == 0)
-                    {
                         throw new Win32Exception();
-                    }
+
                     qscs.binaryPathName = IntPtr.Zero;
                     qscs.dependencies = IntPtr.Zero;
                     qscs.displayName = IntPtr.Zero;
@@ -278,16 +277,16 @@ namespace LACheck.Enums
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to get service information: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to get service information: {ex.Message}");
                 }
             }
             return serviceInfo;
         }
-        public static int GetStartType(ServiceController svc, string host, bool verbose)
+        public static int GetStartType(ServiceController svc, string host, Utilities.Arguments arguments)
         {
-            ServiceInfo svcInfo = GetServiceInfo(svc.ServiceName, host, verbose);
+            ServiceInfo svcInfo = GetServiceInfo(svc.ServiceName, host, arguments);
             /*string startType;
             //https://docs.microsoft.com/en-us/dotnet/api/system.serviceprocess.servicestartmode
             switch (svcInfo.startType)
@@ -315,7 +314,7 @@ namespace LACheck.Enums
             */
             return svcInfo.startType;
         }
-        public static bool RemoteRegistryStatus(string host, bool verbose)
+        public static bool RemoteRegistryStatus(string host, Utilities.Arguments arguments)
         {
             //Remote Registry needs to be running in order to enumerate registry hives
             //indicate if a reconfiguration of Remote Registry is required
@@ -323,9 +322,9 @@ namespace LACheck.Enums
             try
             {
                 ServiceController remoteRegistry = new ServiceController("Remote Registry", host);
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - {1} Status: {2}", host, remoteRegistry.DisplayName, remoteRegistry.Status);
+                    Console.WriteLine($"[!] {host} - {remoteRegistry.DisplayName} Status: {remoteRegistry.Status}");
                 }
                 if (remoteRegistry.Status == ServiceControllerStatus.Stopped)
                 {
@@ -334,14 +333,14 @@ namespace LACheck.Enums
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query services: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to query services: {ex.Message}");
                 }
             }
             return reconfig;
         }
-        public static void StartRemoteRegistry(ServiceController remoteRegistry, string host, bool verbose)
+        public static void StartRemoteRegistry(ServiceController remoteRegistry, string host, Utilities.Arguments arguments)
         {
             try
             {
@@ -349,38 +348,38 @@ namespace LACheck.Enums
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to start Remote Registry service: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to start Remote Registry service: {ex.Message}");
                 }
             }
         }
-        public static void StopRemoteRegistry(ServiceController remoteRegistry, string host, bool verbose)
+        public static void StopRemoteRegistry(ServiceController remoteRegistry, string host, Utilities.Arguments arguments)
         {
             try
             {
                 TimeSpan timeout = TimeSpan.FromSeconds(5);
                 remoteRegistry.WaitForStatus(ServiceControllerStatus.Running, timeout);
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Remote Registry running...", host);
+                    Console.WriteLine($"[!] {host} - Remote Registry running...");
                 }
                 remoteRegistry.Stop();
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Stopping Remote Registry...", host);
+                    Console.WriteLine($"[!] {host} - Stopping Remote Registry...");
                 }
                 remoteRegistry.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Remote Registry stopped", host);
+                    Console.WriteLine($"[!] {host} - Remote Registry stopped");
                 }
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to stop Remote Registry service: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to stop Remote Registry service: {ex.Message}");
                 }
             }
         }
@@ -421,7 +420,7 @@ namespace LACheck.Enums
             {
                 int nError = Marshal.GetLastWin32Error();
                 var win32Exception = new Win32Exception(nError);
-                throw new ExternalException("[!] Could not change service start type: " + win32Exception.Message);
+                throw new ExternalException($"[!] {host} - Could not change service start type: {win32Exception.Message}");
             }
 
             CloseServiceHandle(serviceHandle);

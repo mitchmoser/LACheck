@@ -17,22 +17,23 @@ namespace LACheck.Enums
                 {
                     ManagementObjectCollection test = searcher.Get();
                 }
-                Console.WriteLine("[RPC] Admin Success: {0}", host);
+                Console.WriteLine($"[RPC] Admin Success: {host} as {arguments.user}");
+                Utilities.BloodHound.LACheckSessions.AdminSuccess.Add(host);
                 if (arguments.edr)
                 {
-                    Enums.EDR.EDRCheckWMI(host, ns, arguments.verbose);
+                    Enums.EDR.EDRCheckWMI(host, ns, arguments);
                 }
                 if (arguments.logons)
                 {
-                    Enums.LogonSessions.GetSessionsWMI(host, ns, arguments.verbose);
+                    Enums.LogonSessions.GetSessionsWMI(host, arguments.usershort, ns, arguments);
                 }
                 if (arguments.registry)
                 {
-                    Enums.Registry.GetCurrentUsersWMI(host, ns, arguments.verbose);
+                    Enums.Registry.GetCurrentUsersWMI(host, ns, arguments);
                 }
                 if (arguments.services)
                 {
-                    Enums.Services.GetServicesWMI(host, ns, arguments.verbose);
+                    Enums.Services.GetServicesWMI(host, ns, arguments);
                 }
 
             }
@@ -40,7 +41,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] RPC on {0} - {1}", host, ex.Message.Trim());
+                    Console.WriteLine($"[!] {host} - RPC Error: {ex.Message.Trim()}");
                 }
             }
         }

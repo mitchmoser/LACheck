@@ -19,21 +19,32 @@ namespace LACheck
                 Utilities.Options.ValidateCredentials();
             }
 
-            List<string> hosts = new List<string>();
-            if (!String.IsNullOrEmpty(arguments.targets))
-            {
-                List<string> targets = arguments.targets.Split(',').ToList();
-                hosts = hosts.Concat(targets).ToList();
-            }
+            Dictionary<string, string> hosts = new Dictionary<string, string>();
             if (!String.IsNullOrEmpty(arguments.ldap))
             {
-                List<string> ldap = Utilities.LDAP.SearchLDAP(arguments.ldap, arguments.verbose);
-                hosts = hosts.Concat(ldap).ToList();
+                Dictionary<string, string> ldap = Utilities.LDAP.SearchLDAP(arguments.ldap, arguments.verbose);
+                hosts = hosts.Union(ldap.Where(k => !hosts.ContainsKey(k.Key))).ToDictionary(k => k.Key, v => v.Value);
             }
             if (!String.IsNullOrEmpty(arguments.ou))
             {
-                List<string> ou = Utilities.LDAP.SearchOU(arguments.ou, arguments.verbose);
-                hosts = hosts.Concat(ou).ToList();
+                Dictionary<string, string> ou = Utilities.LDAP.SearchOU(arguments.ou, arguments.verbose);
+                hosts = hosts.Union(ou.Where(k => !hosts.ContainsKey(k.Key))).ToDictionary(k => k.Key, v => v.Value);
+            }
+            if (!String.IsNullOrEmpty(arguments.targets))
+            {
+                List<string> targets = arguments.targets.Split(',').ToList();
+                foreach (string target in targets)
+                {
+                    if (!hosts.ContainsKey(target.ToUpper()))
+                    {
+                        string SID = null;
+                        //only resolve SID if needed for bloodhound output
+                        if (arguments.bloodhound)
+                            SID = Utilities.LDAP.GetComputerSID(target, arguments.verbose);
+                        //add hostname:SID pair to hosts dictionary
+                        hosts.Add(target.ToUpper(), SID);
+                    }
+                }
             }
             if (hosts.Count == 0)
             {
@@ -41,9 +52,7 @@ namespace LACheck
                 Utilities.Options.Usage();
                 Environment.Exit(0);
             }
-            //remove duplicate hosts
-            hosts = hosts.Distinct().ToList();
-
+            
             //https://docs.microsoft.com/en-us/windows/win32/wmisdk/wql-operators
             //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystem
             //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-logonsession
@@ -54,26 +63,33 @@ namespace LACheck
             //https://blog.danskingdom.com/limit-the-number-of-c-tasks-that-run-in-parallel/
             var listOfChecks = new List<Action>();
 
-            foreach (string host in hosts)
+            foreach (KeyValuePair<string, string> host in hosts)
             {
                 if (arguments.rpc)
                 {
                     // Note that we create the Action here, but do not start it.
-                    listOfChecks.Add(() => Enums.WMI.Check(host, ns, wql, arguments));
+                    listOfChecks.Add(() => Enums.WMI.Check(host.Key, ns, wql, arguments));
                 }
                 if (arguments.smb)
                 {
-                    listOfChecks.Add(() => Enums.SMB.Check(host, arguments));
+                    listOfChecks.Add(() => Enums.SMB.Check(host.Key, arguments));
                 }
                 if (arguments.winrm)
                 {
-                    listOfChecks.Add(() => Enums.WINRM.Check(host, ns, wql, arguments));
+                    listOfChecks.Add(() => Enums.WINRM.Check(host.Key, ns, wql, arguments));
                 }
             }
             //https://devblogs.microsoft.com/pfxteam/parallel-invoke-vs-explicit-task-management/
             var options = new ParallelOptions { MaxDegreeOfParallelism = arguments.threads };
             Parallel.Invoke(options, listOfChecks.ToArray());
-            Console.WriteLine("[+] Finished");
+            Console.WriteLine("[+] Finished enumerating hosts");
+            if (arguments.bloodhound)
+            {
+                //filter dictionary of all resolved host:SID pairs only keeping hosts where Admin Checks succeeded
+                Dictionary<string, string> outputHosts = Utilities.BloodHound.LACheckSessions.AdminSuccess.Distinct().Where(i => hosts.ContainsKey(i)).ToDictionary(i => i, i => hosts[i]);
+                Utilities.SessionInfo.ResolveSIDs(outputHosts, arguments);
+                Utilities.BloodHound.PrintOutput(outputHosts, arguments);
+            }
         }
     }
 }

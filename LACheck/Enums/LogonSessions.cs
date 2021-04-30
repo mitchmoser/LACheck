@@ -24,27 +24,36 @@ namespace LACheck.Enums
     {
         // Exclude services running as local accounts
         static string[] exclusions = { "ANONYMOUS LOGON", "DWM-1", "DWM-2", "IUSR", "LOCAL SERVICE", "NETWORK SERVICE", "SYSTEM", "UMFD-0", "UMFD-1", "UMFD-2", "UMFD-3", "UMFD-4" };
-        public static void GetSessionsWinRM(string host, bool verbose)
+        public static void GetSessionsWinRM(string host, Utilities.Arguments arguments)
         {
             List<Session> sessions = new List<Session>();
-            sessions = LoggedOnUserWinRM(sessions, host, verbose);
-            sessions = LogonSessionWinRM(sessions, host, verbose);
+            sessions = LoggedOnUserWinRM(sessions, host, arguments);
+            sessions = LogonSessionWinRM(sessions, host, arguments);
 
             //get distinct list of users from sessions
             List<string> users = sessions.Select(x => x.username).Distinct().ToList();
+            Utilities.SessionInfo.ComputerSessions computer = new Utilities.SessionInfo.ComputerSessions();
+            computer.hostname = host;
             foreach (string user in users)
             {
-                //retrieve the most recent session for each distinct user
-                Session sestime = sessions.Where(x => x.username == user).OrderByDescending(x => x.starttime).First();
-                Console.WriteLine("[session] {0} - {1}\\{2} {3}",
-                                   host,
-                                   sestime.domain,
-                                   sestime.username,
-                                   sestime.starttime
-                                 );
+                // if /user argument was not specified 
+                // or /user argument does not match current enumerated session
+                if (String.IsNullOrEmpty(arguments.usershort) || user != arguments.usershort)
+                {
+                    //retrieve the most recent session for each distinct user
+                    Session sestime = sessions.Where(x => x.username == user).OrderByDescending(x => x.starttime).First();
+
+                    Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
+                    storedSession.domain = sestime.domain;
+                    storedSession.username = sestime.username;
+                    computer.sessions.Add(storedSession);
+
+                    Console.WriteLine($"[session] {host} - {sestime.domain}\\{sestime.username} {sestime.starttime} ({arguments.user})");
+                }
             }
+            Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
         }
-        public static List<Session> LoggedOnUserWinRM(List<Session> sessions, string host, bool verbose)
+        public static List<Session> LoggedOnUserWinRM(List<Session> sessions, string host, Utilities.Arguments arguments)
         {
             try
             {
@@ -106,14 +115,14 @@ namespace LACheck.Enums
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query services over WinRM: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to query services over WinRM: {ex.Message}");
                 }
             }
             return sessions;
         }
-        public static List<Session> LogonSessionWinRM(List<Session> sessions, string host, bool verbose)
+        public static List<Session> LogonSessionWinRM(List<Session> sessions, string host, Utilities.Arguments arguments)
         {
             foreach (Session session in sessions)
             {
@@ -157,35 +166,46 @@ namespace LACheck.Enums
                 }
                 catch (Exception ex)
                 {
-                    if (verbose)
+                    if (arguments.verbose)
                     {
-                        Console.WriteLine("[!] {0} - Unable to query sessions over WinRM: {1}", host, ex.Message);
+                        Console.WriteLine($"[!] {host} - Unable to query sessions over WinRM: {ex.Message}");
                     }
                 }
             }
             return sessions;
         }
-        public static void GetSessionsWMI(string host, string ns, bool verbose)
+        public static void GetSessionsWMI(string host, string username, string ns, Utilities.Arguments arguments)
         {
+            
+
             List<Session> sessions = new List<Session>();
-            sessions = LoggedOnUserWMI(sessions, host, ns, verbose);
-            sessions = LogonSessionWMI(sessions, host, ns, verbose);
+            sessions = LoggedOnUserWMI(sessions, host, ns, arguments);
+            sessions = LogonSessionWMI(sessions, host, ns, arguments);
 
             //get distinct list of users from sessions
             List<string> users = sessions.Select(x => x.username).Distinct().ToList();
+            Utilities.SessionInfo.ComputerSessions computer = new Utilities.SessionInfo.ComputerSessions();
+            computer.hostname = host;
             foreach (string user in users)
             {
-                //retrieve the most recent session for each distinct user
-                Session sestime = sessions.Where(x => x.username == user).OrderByDescending(x => x.starttime).First();
-                Console.WriteLine("[session] {0} - {1}\\{2} {3}",
-                                   host,
-                                   sestime.domain,
-                                   sestime.username,
-                                   sestime.starttime
-                                 );
+                // if /user argument was not specified 
+                // or /user argument does not match current enumerated session
+                if (String.IsNullOrEmpty(username) || user != username)
+                {
+                    //retrieve the most recent session for each distinct user
+                    Session sestime = sessions.Where(x => x.username == user).OrderByDescending(x => x.starttime).First();
+                    
+                    Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
+                    storedSession.domain = sestime.domain;
+                    storedSession.username = sestime.username;
+                    computer.sessions.Add(storedSession);
+
+                    Console.WriteLine($"[session] {host} - {sestime.domain}\\{sestime.username} {sestime.starttime} ({arguments.user})");
+                }
             }
+            Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
         }
-        public static List<Session> LoggedOnUserWMI(List<Session> sessions, string host, string ns, bool verbose)
+        public static List<Session> LoggedOnUserWMI(List<Session> sessions, string host, string ns, Utilities.Arguments arguments)
         {
             ManagementScope scope = new ManagementScope(string.Format(@"\\{0}\{1}", host, ns));
 
@@ -223,14 +243,14 @@ namespace LACheck.Enums
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query services over WMI: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to query services over WMI: {ex.Message}");
                 }
             }
             return sessions;
         }
-        public static List<Session> LogonSessionWMI(List<Session> sessions, string host, string ns, bool verbose)
+        public static List<Session> LogonSessionWMI(List<Session> sessions, string host, string ns, Utilities.Arguments arguments)
         {
             foreach (Session session in sessions)
             {
@@ -272,9 +292,9 @@ namespace LACheck.Enums
                 }
                 catch (Exception ex)
                 {
-                    if (verbose)
+                    if (arguments.verbose)
                     {
-                        Console.WriteLine("[!] {0} - Unable to query services over WMI: {1}", host, ex.Message);
+                        Console.WriteLine($"[!] {host} - Unable to query services over WMI: {ex.Message}");
                     }
                 }
             }

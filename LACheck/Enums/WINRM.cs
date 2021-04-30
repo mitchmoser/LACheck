@@ -38,14 +38,15 @@ namespace LACheck.Enums
                 }
                 if (results != "")
                 {
-                    Console.WriteLine("[WinRM] Admin Success: {0}", host);
+                    Console.WriteLine($"[WinRM] Admin Success: {host} as {arguments.user}");
+                    Utilities.BloodHound.LACheckSessions.AdminSuccess.Add(host);
                     if (arguments.edr)
                     {
-                        Enums.EDR.EDRCheckWinRM(host, arguments.verbose);
+                        Enums.EDR.EDRCheckWinRM(host, arguments);
                     }
                     if (arguments.logons)
                     {
-                        Enums.LogonSessions.GetSessionsWinRM(host, arguments.verbose);
+                        Enums.LogonSessions.GetSessionsWinRM(host, arguments);
                     }
                     if (arguments.registry)
                     {
@@ -54,19 +55,19 @@ namespace LACheck.Enums
                     }
                     if (arguments.services)
                     {
-                        Enums.Services.GetServicesWinRM(host, arguments.verbose);
+                        Enums.Services.GetServicesWinRM(host, arguments);
                     }
                 }
                 if (arguments.verbose && results == "")
                 {
-                    Console.WriteLine("[!] WinRM no response for query on {0}", host);
+                    Console.WriteLine($"[!] {host} - no WinRM response for query");
                 }
             }
             catch (Exception ex)
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] WinRM on {0} - {1}", host, ex.Message.Trim());
+                    Console.WriteLine($"[!] {host} WinRM Error: {ex.Message.Trim()}");
                 }
             }
 

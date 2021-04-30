@@ -136,7 +136,7 @@ namespace LACheck.Enums
             { "ssfmonm.sys" , "Webroot Software, Inc." },
         };
 
-        public static void EDRCheckSMB(string host)
+        public static void EDRCheckSMB(string host, Utilities.Arguments arguments)
         {
             string x64path = @"\\" + host + @"\C$\windows\system32\drivers";
             string x86path = @"\\" + host + @"\C$\windows\sysnative\drivers";
@@ -181,16 +181,16 @@ namespace LACheck.Enums
 
                 if (matches.Any())
                 {
-                    Console.WriteLine("[EDR] {0} - Found: {1}", host, String.Join(", ", matches.ToArray()));
+                    Console.WriteLine($"[EDR] {host} - Found: {String.Join(", ", matches.ToArray())} ({arguments.user})");
                 }
                 else
                 {
-                    Console.WriteLine("[EDR] {0} - no EDR found", host);
+                    Console.WriteLine($"[EDR] {host} - no EDR found ({arguments.user})");
                 }
                 
             }
         }
-        public static void EDRCheckWinRM(string host, bool verbose)
+        public static void EDRCheckWinRM(string host, Utilities.Arguments arguments)
         {
             try
             {
@@ -236,22 +236,22 @@ namespace LACheck.Enums
 
                 if (matches.Any())
                 {
-                    Console.WriteLine("[EDR] {0} - Found: {1}", host, String.Join(", ", matches.ToArray()));
+                    Console.WriteLine($"[EDR] {host} - Found: {String.Join(", ", matches.ToArray())} ({arguments.user})");
                 }
                 else
                 {
-                    Console.WriteLine("[EDR] {0} - no EDR found", host);
+                    Console.WriteLine($"[EDR] {host} - no EDR found ({arguments.user})");
                 }
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query drivers over WinRM: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to query drivers over WinRM: {ex.Message}");
                 }
             }
         }
-        public static void EDRCheckWMI(string host, string ns, bool verbose)
+        public static void EDRCheckWMI(string host, string ns, Utilities.Arguments arguments)
         {
             ManagementScope scope = new ManagementScope(string.Format(@"\\{0}\{1}", host, ns));
 
@@ -289,19 +289,19 @@ namespace LACheck.Enums
 
                     if (matches.Any())
                     {
-                        Console.WriteLine("[EDR] {0} - Found: {1}", host, String.Join(", ", matches.ToArray()));
+                        Console.WriteLine($"[EDR] {host} - Found: {String.Join(", ", matches.ToArray())} ({arguments.user})");
                     }
                     else
                     {
-                        Console.WriteLine("[EDR] {0} - no EDR found", host);
+                        Console.WriteLine($"[EDR] {host} - no EDR found ({arguments.user})");
                     }
                 }
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query drivers over WMI: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to query drivers over WMI: {ex.Message}");
                 }
             }
         }

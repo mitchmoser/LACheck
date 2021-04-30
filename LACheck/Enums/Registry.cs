@@ -11,34 +11,34 @@ namespace LACheck.Enums
 {
     class Registry
     {
-        public static void RegistryCheck(string host, bool verbose)
+        public static void RegistryCheck(string host, Utilities.Arguments arguments)
         {
             //check status of Remote Registry service
-            bool reconfig = Enums.Services.RemoteRegistryStatus(host, verbose);
+            bool reconfig = Enums.Services.RemoteRegistryStatus(host, arguments);
             //if changes are needed to start Remote Registry
             if (reconfig)
             {
                 //1. record initial state
                 ServiceController remoteRegistry = new ServiceController("Remote Registry", host);
-                int startType = Enums.Services.GetStartType(remoteRegistry, host, verbose);
+                int startType = Enums.Services.GetStartType(remoteRegistry, host, arguments);
                 //2. make changes
                 // been getting "Access is Denied" on this one unless run under Administrator context
                 // may need to create a service to start Remote Registry as SYSTEM
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - setting Remote Registry start mode to Automatic", host);
+                    Console.WriteLine($"[!] {host} - setting Remote Registry start mode to Automatic");
                 }
                 Enums.Services.ChangeStartMode(remoteRegistry, ServiceStartMode.Automatic, host);
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - starting Remote Registry", host);
+                    Console.WriteLine($"[!] {host} - starting Remote Registry");
                 }
-                Enums.Services.StartRemoteRegistry(remoteRegistry, host, verbose);
+                Enums.Services.StartRemoteRegistry(remoteRegistry, host, arguments);
                 //3. perform checks
-                Enums.Registry.GetCurrentUser(host, verbose);
+                Enums.Registry.GetCurrentUser(host, arguments);
                 //4. restore changes
                 //stop Remote Registry
-                Enums.Services.StopRemoteRegistry(remoteRegistry, host, verbose);
+                Enums.Services.StopRemoteRegistry(remoteRegistry, host, arguments);
                 ServiceStartMode svcStartMode;
                 //https://docs.microsoft.com/en-us/dotnet/api/system.serviceprocess.servicestartmode
                 switch (startType)
@@ -62,10 +62,10 @@ namespace LACheck.Enums
             else
             {
                 //perform checks w/o reconfiguring
-                Enums.Registry.GetCurrentUser(host, verbose);
+                Enums.Registry.GetCurrentUser(host, arguments);
             }
         }
-        public static void GetCurrentUser(string host, bool verbose)
+        public static void GetCurrentUser(string host, Utilities.Arguments arguments)
         {
             try
             {
@@ -84,7 +84,7 @@ namespace LACheck.Enums
                         RegistryKey key = baseKey.OpenSubKey(target);
                         string domain = key.GetValue("USERDOMAIN").ToString();
                         string username = key.GetValue("USERNAME").ToString();
-                        Console.WriteLine("[registry] {0} - {1}\\{2}", host, domain, username);
+                        Console.WriteLine($"[registry] {host} - {domain}\\{username} ({arguments.user})");
                     }
                     catch
                     {
@@ -97,9 +97,9 @@ namespace LACheck.Enums
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Registry error: {1}", host, ex.Message.Trim());
+                    Console.WriteLine($"[!] {host} - Registry error: {ex.Message.Trim()}");
                 }
             }
 
@@ -152,11 +152,11 @@ namespace LACheck.Enums
             {
                 if (verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query registry over WinRM: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to query registry over WinRM: {ex.Message}");
                 }
             }
         }
-        public static void GetCurrentUsersWMI(string host, string ns, bool verbose)
+        public static void GetCurrentUsersWMI(string host, string ns, Utilities.Arguments arguments)
         {
             /* https://docs.microsoft.com/en-us/dotnet/api/microsoft.win32.registryhive
              * get SIDs from Win32_UserProfile WMI class
@@ -208,15 +208,15 @@ namespace LACheck.Enums
                     }
 
                     if (!String.IsNullOrEmpty(domain) && !String.IsNullOrEmpty(username))
-                        Console.WriteLine("[registry] {0} - {1}\\{2}", host, domain, username);
+                        Console.WriteLine($"[registry] {host} - {domain}\\{username} ({arguments.user})");
                 }
 
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] {0} - Unable to query registry over WMI: {1}", host, ex.Message);
+                    Console.WriteLine($"[!] {host} - Unable to query registry over WMI: {ex.Message}");
                 }
             }
         }

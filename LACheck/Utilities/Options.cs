@@ -8,6 +8,7 @@ namespace LACheck.Utilities
     //default values off all arguments
     public class Arguments
     {
+        public bool bloodhound = false;
         public bool edr = false;
         public bool help = false;
         public bool logons = false;
@@ -22,6 +23,8 @@ namespace LACheck.Utilities
         public string ldap = null;
         public string ou = null;
         public string targets = null;
+        public string user = null;
+        public string usershort = null;
     }
     class Options
     {
@@ -36,7 +39,7 @@ namespace LACheck.Utilities
  |______/_/    \_\  \_____|_| |_|\___|\___|_|\_\
 
 Usage:
-    LACheck.exe smb rpc /targets:hostname,fqdn.domain.tld,10.10.10.10 /ldap:all /ou:""OU=Special Servers,DC=example,DC=local"" /verbose /validate
+    LACheck.exe smb rpc /targets:hostname,fqdn.domain.tld,10.10.10.10 /ldap:all /ou:""OU=Special Servers,DC=example,DC=local"" /verbose /bloodhound /user:bob@contoso.lab
 
 Local Admin Checks:
     smb   - Attempts to access C$ share
@@ -44,16 +47,19 @@ Local Admin Checks:
     winrm - Attempts WMI query of Win32_ComputerSystem Class Provider over WinRM Session
 
 Arguments:
-    /edr      - check host for EDR (requires smb, rpc, or winrm)
-    /logons   - return logged on users on a host (requires smb, rpc, or winrm)
-    /registry - enumerate sessions from registry hive (requires smb)
-    /services - return services running as users (requires smb, rpc, or winrm)
-    /targets  - comma-separated list of hostnames to check
-    /threads  - specify maximum number of parallel threads (default=25)
-    /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
-    /verbose  - print additional logging information
-    /ou       - specify LDAP OU to query enabled computer objects from
-                ex: ""OU=Special Servers,DC=example,DC=local""
+    /bloodhound - generate bloodhound-digestible AdminTo and Session collection file
+                  output file is zipped and enypted with randomized name and password
+    /edr        - check host for EDR (requires smb, rpc, or winrm)
+    /logons     - return logged on users on a host (requires smb, rpc, or winrm)
+    /registry   - enumerate sessions from registry hive (requires smb)
+    /services   - return services running as users (requires smb, rpc, or winrm)
+    /targets    - comma-separated list of hostnames to check
+    /threads    - specify maximum number of parallel threads (default=25)
+    /user       - specify username that collection was run under (useful during token manipulation)
+    /validate   - check credentials against Domain prior to scanning targets (useful during token manipulation)
+    /verbose    - print additional logging information
+    /ou         - specify LDAP OU to query enabled computer objects from
+                  ex: ""OU=Special Servers,DC=example,DC=local""
     /ldap - query hosts from the following LDAP filters:
          :all - All enabled computers with 'primary' group 'Domain Computers'
          :dc  - All enabled Domain Controllers (not read-only DCs)
@@ -68,7 +74,7 @@ Arguments:
 
             Dictionary<string, string[]> result = new Dictionary<string, string[]>();
             //these boolean variables aren't passed w/ values. If passed, they are "true"
-            string[] booleans = new string[] { "/edr", "/logons", "/registry", "/services", "smb","winrm", "wmi", "/validate", "/verbose" };
+            string[] booleans = new string[] { "/bloodhound", "/edr", "/logons", "/registry", "/services", "smb","winrm", "wmi", "/validate", "/verbose" };
             
             //stores the arguments provided by user
             var argList = new List<string>();
@@ -95,6 +101,10 @@ Arguments:
         public static Arguments ArgumentValues(Dictionary<string, string[]> parsedArgs)
         {
             Arguments arguments = new Arguments();
+            if (parsedArgs.ContainsKey("/bloodhound"))
+            {
+                arguments.bloodhound = Convert.ToBoolean(parsedArgs["/bloodhound"][0]);
+            }
             if (parsedArgs.ContainsKey("/edr"))
             {
                 arguments.edr = Convert.ToBoolean(parsedArgs["/edr"][0]);
@@ -139,6 +149,27 @@ Arguments:
             {
                 arguments.threads = Convert.ToInt32(parsedArgs["/threads"][0]);
             }
+            if (parsedArgs.ContainsKey("/user"))
+            {
+                arguments.user = parsedArgs["/user"][0];
+            }
+            else
+            {
+                arguments.user = Environment.UserName;
+            }
+            // WMI session enumeration includes the user that ran the query as a 'session' 
+            // remove this false positive 
+            try
+            {
+                // username is formatted as user@domain.fqdn
+                // strip off '@domain.fqdn'
+                // can fail if /user argument was not specified
+                arguments.usershort = arguments.user.Split('@')[0];
+            }
+            catch 
+            { 
+                arguments.usershort = arguments.user;
+            }
             if (parsedArgs.ContainsKey("/validate"))
             {
                 arguments.validate = Convert.ToBoolean(parsedArgs["/validate"][0]);
@@ -158,6 +189,11 @@ Arguments:
                 Usage();
                 Environment.Exit(0);
             }
+            if (arguments.bloodhound && String.IsNullOrEmpty(arguments.user))
+            {
+                Console.WriteLine("[!] specify current user with /user flag in 'username@domain.fqdn' format");
+                Environment.Exit(0);
+            }
             return arguments;
         }
         public static void PrintOptions(Arguments args)
@@ -166,6 +202,7 @@ Arguments:
             Console.WriteLine("\trpc: {0}", args.rpc);
             Console.WriteLine("\tsmb: {0}", args.smb);
             Console.WriteLine("\twinrm: {0}", args.winrm);
+            Console.WriteLine("\t/bloodhound: {0}", args.bloodhound);
             Console.WriteLine("\t/edr: {0}", args.edr);
             Console.WriteLine("\t/logons: {0}", args.logons);
             Console.WriteLine("\t/registry: {0}", args.registry);
@@ -174,6 +211,7 @@ Arguments:
             Console.WriteLine("\t/ou: {0}", args.ou);
             Console.WriteLine("\t/targets: {0}", args.targets);
             Console.WriteLine("\t/threads: {0}", args.threads);
+            Console.WriteLine("\t/user: {0}", args.user);
             Console.WriteLine("\t/validate: {0}", args.validate);
             Console.WriteLine("\t/verbose: {0}", args.verbose);
         }

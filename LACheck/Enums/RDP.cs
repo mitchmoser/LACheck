@@ -167,7 +167,7 @@ namespace LACheck.Enums
         }
         //https://stackoverflow.com/questions/32522545/retrieve-user-logontime-on-terminal-service-with-remote-desktop-services-api
         //https://social.technet.microsoft.com/Forums/windowsserver/en-US/cbfd802c-5add-49f3-b020-c901f1a8d3f4/retrieve-user-logontime-on-terminal-service-with-remote-desktop-services-api
-        public static void GetRDPUsers(string hostname, bool verbose)
+        public static void GetRDPUsers(string hostname, Utilities.Arguments arguments)
         {
             IntPtr serverHandle = IntPtr.Zero;
             List<string> resultList = new List<string>();
@@ -237,14 +237,14 @@ namespace LACheck.Enums
                 sessions = sessions.Distinct().ToList();
                 foreach (string session in sessions)
                 {
-                    Console.WriteLine("[rdp] {0} - {1}", hostname, session);
+                    Console.WriteLine($"[rdp] {hostname} - {session} ({arguments.user})");
                 }
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] RDP Session Collection Error: {0}", ex.Message);
+                    Console.WriteLine($"[!] RDP Session Collection Error: {ex.Message}");
                 }
                 WTSCloseServer(serverHandle);
                 Environment.Exit(0);

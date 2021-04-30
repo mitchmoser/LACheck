@@ -76,7 +76,7 @@ namespace LACheck.Enums
             public string wkui1_logon_server;
         }
         //http://www.pinvoke.net/default.aspx/netapi32.netwkstauserenum
-        public static void GetLoggedOnUsers(string hostname, bool verbose)
+        public static void GetLoggedOnUsers(string hostname, Utilities.Arguments arguments)
         {
 
             IntPtr bufptr = IntPtr.Zero;
@@ -113,9 +113,9 @@ namespace LACheck.Enums
                     }
                     else
                     {
-                        if (verbose)
+                        if (arguments.verbose)
                         {
-                            Console.WriteLine("[!] A system error has occurred : " + nStatus);
+                            Console.WriteLine($"[!] A system error has occurred: {nStatus}");
                         }
                     }
                 }
@@ -127,10 +127,18 @@ namespace LACheck.Enums
             
             //remove duplicate users
             loggedOnUsers = loggedOnUsers.Distinct().ToList();
+
+            Utilities.SessionInfo.ComputerSessions computer = new Utilities.SessionInfo.ComputerSessions();
+            computer.hostname = hostname;
             foreach (string user in loggedOnUsers)
             {
-                Console.WriteLine("[session] {0} - {1}", hostname, user);
+                Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
+                storedSession.domain = user.Split('\\')[0];
+                storedSession.username = user.Split('\\')[1];
+                computer.sessions.Add(storedSession);
+                Console.WriteLine($"[session] {hostname} - {user} ({arguments.user})");
             }
+            Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
         }
     }
 }
