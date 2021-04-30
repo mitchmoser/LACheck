@@ -12,7 +12,7 @@ Multithreaded C# .NET Assembly Local Administrative Privilege Enumeration
  |______/_/    \_\  \_____|_| |_|\___|\___|_|\_\
 
 Usage:
-    LACheck.exe smb rpc /ldap:servers-exclude-dc /targets:hostname,fqdn.domain.tld,10.10.10.10 /verbose /validate
+    LACheck.exe smb rpc /targets:hostname,fqdn.domain.tld,10.10.10.10 /ldap:all /ou:"OU=Special Servers,DC=example,DC=local" /verbose /bloodhound /user:bob@contoso.lab
 
 Local Admin Checks:
     smb   - Attempts to access C$ share
@@ -20,22 +20,25 @@ Local Admin Checks:
     winrm - Attempts WMI query of Win32_ComputerSystem Class Provider over WinRM Session
 
 Arguments:
-    /edr      - check host for EDR (requires smb, rpc, or winrm)
-    /logons   - return logged on users on a host (requires smb, rpc, or winrm)
-    /registry - enumerate sessions from registry hive (requires smb)
-    /services - return services running as users (requires smb, rpc, or winrm)
-    /targets  - comma-separated list of hostnames to check
-    /threads  - specify maximum number of parallel threads (default=25)
-    /validate - check credentials against Domain prior to scanning targets (useful during token manipulation)
-    /verbose  - print additional logging information
-    /ou       - specify LDAP OU to query enabled computer objects from
-                ex: "OU=Special Servers,DC=example,DC=local"
+    /bloodhound - generate bloodhound-digestible AdminTo and Session collection file
+                  output file is zipped and enypted with randomized name and password
+    /edr        - check host for EDR (requires smb, rpc, or winrm)
+    /logons     - return logged on users on a host (requires smb, rpc, or winrm)
+    /registry   - enumerate sessions from registry hive (requires smb)
+    /services   - return services running as users (requires smb, rpc, or winrm)
+    /targets    - comma-separated list of hostnames to check
+    /threads    - specify maximum number of parallel threads (default=25)
+    /user       - specify username that collection was run under (useful during token manipulation)
+    /validate   - check credentials against Domain prior to scanning targets (useful during token manipulation)
+    /verbose    - print additional logging information
+    /ou         - specify LDAP OU to query enabled computer objects from
+                  ex: "OU=Special Servers,DC=example,DC=local"
     /ldap - query hosts from the following LDAP filters:
          :all - All enabled computers with 'primary' group 'Domain Computers'
-         :dc - All enabled Domain Controllers
-         :exclude-dc - All enabled computers that are not Domain Controllers
+         :dc  - All enabled Domain Controllers (not read-only DCs)
+         :exclude-dc - All enabled computers that are not Domain Controllers or read-only DCs
          :servers - All enabled servers
-         :servers-exclude-dc - All enabled servers excluding DCs
+         :servers-exclude-dc - All enabled servers excluding Domain Controllers or read-only DCs
 ```
 ### Execute Assembly
 ```
@@ -48,35 +51,40 @@ execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc 
 [+] received Output
 [+] Parsed Aguments:
         rpc: True
-        smb: False
-        winrm: False
+        smb: True
+        winrm: True
+        /bloodhound: False
         /edr: False
         /logons: True
         /registry: False
         /services: False
         /ldap: servers-exclude-dc
         /ou:
-        /targets: WEB01,DEV02.contoso.com,10.10.10.10
-        /logons: true
-        /validate: true
-        /verbose: true
+        /targets:
         /threads: 10
+        /user: svcadmin
+        /validate: False
+        /verbose: False
 [+] Performing LDAP query for all enabled computers that are not Domain Controllers or read-only DCs...
 [+] This may take some time depending on the size of the environment
 [+] LDAP Search Results: 2
-[SMB] Admin Success: WEB01
-[session] WEB01 - contoso\devadmin
-[session] WEB01 - contoso\devuser
-[session] WEB01 - contoso\WEB01$
-[session] WEB01 - contoso\devadmin
-[session] WEB01 - contoso\devuser
-[rdp] WEB01 - contoso\devadmin rdp-tcp#2 Active Last Connection: 00:00:50:26 Last Input: 00:00:00:00
-[RPC] Admin Success: WEB01
-[WinRM] Admin Success: DESKTOP-118GDCE
-[WinRM] Admin Success: DEV02.contoso.com
+[SMB] Admin Success: WEB01 as svcadmin
+[session] WEB01 - contoso\devadmin (svcadmin)
+[session] WEB01 - contoso\devuser (svcadmin)
+[session] WEB01 - contoso\WEB01$ (svcadmin)
+[session] WEB01 - contoso\devadmin (svcadmin)
+[session] WEB01 - contoso\devuser (svcadmin)
+[rdp] WEB01 - contoso\devadmin rdp-tcp#2 Active Last Connection: 00:00:50:26 Last Input: 00:00:00:00  (svcadmin)
+[session] WEB01 - contoso\devadmin (svcadmin)
+[session] WEB01 - contoso\devuser (svcadmin)
+[session] WEB01 - contoso\WEB01$ (svcadmin)
+[session] WEB01 - contoso\devadmin (svcadmin)
+[session] WEB01 - contoso\devuser (svcadmin)
+[WinRM] Admin Success: DESKTOP-118GDCE as svcadmin
+[WinRM] Admin Success: DEV02.contoso.com as svcadmin
 [!] RPC on DEV02.contoso.com - Access denied.
 [!] SMB on DEV02.contoso.com - Attempted to perform an unauthorized operation.
-[RPC] Admin Success: 10.10.10.10
+[RPC] Admin Success: 10.10.10.10  as svcadmin
 [!] SMB on 10.10.10.10 - Attempted to perform an unauthorized operation.
 [!] WinRM on 10.10.10.10 - The WinRM client cannot process the request. Default authentication may be used with an IP address under the following conditions: the transport is HTTPS or the destination is in the TrustedHosts list, and explicit credentials are provided. Use winrm.cmd to configure TrustedHosts. Note that computers in the TrustedHosts list might not be authenticated. For more information on how to set TrustedHosts run the following command: winrm help config.
 ```
@@ -101,6 +109,16 @@ All hosts returned from these flags are combined and deduplicated before enumera
 |/registry|slow| fast | - |
 
 \- = not implemented
+
+## Bloodhound
+LACheck supports writing AdminTo and Session collected into json output that can be uploaded to BloodHound
+
+This output is only meant to augment an existing BloodHound collection with updated Administrative privileges for a single user and Sessions collected from hosts that Administrative privileges have been identified
+
+The `/bloodhound` switch will write a randomly-named encrypted zip file to disk which can be downloaded, extracted, and uploaded to BloodHound
+
+### /user
+BloodHound requires resolving users and computers to SIDs. Due to impersonation techniques such as Cobalt Strike's `make_token` and `kerberos_ticket_use`, LACheck may not be able to accurately determine the user context for a collection. The `/user` arguement is required to supply LACheck with the userprincipalname (format = `samaccountname@domain.tld`) of the context it is ran under in order to accurately correlate the collection information.
 
 ## SMB
 ### /edr
