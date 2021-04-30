@@ -2,51 +2,14 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.DirectoryServices.AccountManagement;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Security.AccessControl;
-using System.Security.Principal;
 using System.Text;
 
 namespace LACheck.Utilities
 {
     class BloodHound
     {
-        // load required dlls for final standalone exe
-        // in this case Newtonsoft.Json.dll
-        /*
-        static BloodHound()
-        {
-            AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-        }
-        static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
-        {
-            var currentAssembly = Assembly.GetExecutingAssembly();
-            var requiredDllName = $"{(new AssemblyName(args.Name).Name)}.dll";
-            var resource = currentAssembly.GetManifestResourceNames().Where(s => s.EndsWith(requiredDllName)).FirstOrDefault();
-            if (resource != null)
-            {
-                using (var stream = currentAssembly.GetManifestResourceStream(resource))
-                {
-                    if (stream == null)
-                    {
-                        return null;
-                    }
-
-                    var block = new byte[stream.Length];
-                    stream.Read(block, 0, block.Length);
-                    return Assembly.Load(block);
-                }
-            }
-            else
-            {
-                return null;
-            }
-        }
-        */
-
         public class BloodHoundOutput
         {
             public List<Computer> computers = new List<Computer>();
