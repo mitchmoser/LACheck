@@ -16,6 +16,7 @@ namespace LACheck.Utilities
     {
         // load required dlls for final standalone exe
         // in this case Newtonsoft.Json.dll
+        /*
         static BloodHound()
         {
             AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
@@ -43,8 +44,9 @@ namespace LACheck.Utilities
             {
                 return null;
             }
-
         }
+        */
+
         public class BloodHoundOutput
         {
             public List<Computer> computers = new List<Computer>();
