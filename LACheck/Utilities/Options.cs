@@ -101,6 +101,7 @@ Arguments:
         public static Arguments ArgumentValues(Dictionary<string, string[]> parsedArgs)
         {
             Arguments arguments = new Arguments();
+            bool userprovided = false;
             if (parsedArgs.ContainsKey("/bloodhound"))
             {
                 arguments.bloodhound = Convert.ToBoolean(parsedArgs["/bloodhound"][0]);
@@ -152,6 +153,7 @@ Arguments:
             if (parsedArgs.ContainsKey("/user"))
             {
                 arguments.user = parsedArgs["/user"][0];
+                userprovided = true;
             }
             else
             {
@@ -189,7 +191,7 @@ Arguments:
                 Usage();
                 Environment.Exit(0);
             }
-            if (arguments.bloodhound && String.IsNullOrEmpty(arguments.user))
+            if (arguments.bloodhound && !userprovided)
             {
                 Console.WriteLine("[!] specify current user with /user flag in 'username@domain.fqdn' format");
                 Environment.Exit(0);

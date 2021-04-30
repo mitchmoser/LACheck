@@ -58,7 +58,10 @@ namespace LACheck.Utilities
                 globalCatalogSearcher.Filter = (String.Format("(&(objectCategory=user)(userprincipalname={0}))", user));
                 globalCatalogSearcher.SizeLimit = int.MaxValue;
                 globalCatalogSearcher.PageSize = int.MaxValue;
-                
+
+                if (globalCatalogSearcher.FindAll().Count <= 0)
+                    Console.WriteLine($"[!] Unable to find SID for {user}. This will impact the accuracy of BloodHound's AdminTo information");
+
                 foreach (SearchResult resEnt in globalCatalogSearcher.FindAll())
                 {
                     SecurityIdentifier byteSID = new SecurityIdentifier((byte[])resEnt.Properties["objectSid"][0], 0);
