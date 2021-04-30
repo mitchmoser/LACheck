@@ -130,12 +130,29 @@ Inspired by [harleyQu1nn's EDR.cna script](https://github.com/harleyQu1nn/Aggres
 
 Drivers are looked up against a list of known drivers used by EDR vendors.
 
+#### Example Output ran as svcadmin user
+```
+[EDR] WEB01 - Found: CrowdStrike, SentinelOne (svcadmin)
+[EDR] DEV02 - no EDR found (svcadmin)
+```
+
 ### /logons
 [NetWkstaUserEnum](https://docs.microsoft.com/en-us/windows/win32/api/lmwksta/nf-lmwksta-netwkstauserenum) returns a list of users with interactive, service and batch logons
 
 [WTSEnumerateSessionsA](https://docs.microsoft.com/en-us/windows/win32/api/wtsapi32/nf-wtsapi32-wtsenumeratesessionsa) returns a list of RDP sessions on a host
 
 [WTSQuerySessionInformationA](https://docs.microsoft.com/en-us/windows/win32/api/wtsapi32/nf-wtsapi32-wtsquerysessioninformationa) retrieves detailed information for each RDP session
+
+#### Example Output ran as svcadmin user
+```
+[session] WEB01 - contoso\devadmin (svcadmin)
+[session] WEB01 - contoso\devuser (svcadmin)
+[session] WEB01 - contoso\WEB01$ (svcadmin)
+[session] WEB01 - contoso\devadmin (svcadmin)
+[session] WEB01 - contoso\devuser (svcadmin)
+[rdp] WEB01 - contoso\devadmin rdp-tcp#2 Active Last Connection: 00:00:50:26 Last Input: 00:00:00:00  (svcadmin)
+```
+
 ### /registry
 Iterate through SIDs in `\\Computer\HKEY_USERS\` hive, attempts to access `Volatile Environment` for each SID, and retrieves values from `USERDOMAIN` and `USERNAME` keys.
 
@@ -148,12 +165,24 @@ This method requires the Remote Registry service to be running on a remote host.
 6. start type is reverted to its initially recorded value
 
 Due to the potentially multi-step process to enumerate each host, this method may be slower compared to alternative techniques. `smb /logons` is faster
+
+#### Example Output ran as svcadmin user
+```
+[registry] WEB01 - contoso\devadmin (svcadmin)
+```
+
 ### /services
 [ServiceController.GetServices Method](https://docs.microsoft.com/en-us/dotnet/api/system.serviceprocess.servicecontroller.getservices) retrieves a list of services on a host
 
 Each service is queried to determine the user it is configured to run as.
 
 Due to each service having to be queried individually, this method may be slower compared to alternative techniques. `wmi /services` is faster
+
+#### Example Output ran as svcadmin user
+```
+[service] WEB01 - devadmin@consoso.com Service: secretsvc State: Running (svcadmin)
+```
+
 ## WMI
 ### /edr
 Inspired by [harleyQu1nn's EDR.cna script](https://github.com/harleyQu1nn/AggressorScripts/blob/master/EDR.cna)
@@ -163,17 +192,43 @@ Inspired by [harleyQu1nn's EDR.cna script](https://github.com/harleyQu1nn/Aggres
 - \\host\C$\windows\sysnative\drivers
 
 Drivers are looked up against a list of known drivers used by EDR vendors.
+
+#### Example Output ran as svcadmin user
+```
+[EDR] WEB01 - Found: CrowdStrike, SentinelOne (svcadmin)
+[EDR] DEV02 - no EDR found (svcadmin)
+```
+
 ### /logons
 [Win32_LoggedOnUser class](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-loggedonuser) returns a list of logged on sessions
 [Win32_LogonSession class](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-logonsession) returns detailed information for each session
 
-### /services
-Queries the [Win32_Service class](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-service) to retrieve the name, user, and state of services
+#### Example Output ran as svcadmin user
+```
+[session] WEB01 - contoso\devadmin  4/20/2021 11:00:05 AM (svcadmin)
+[session] WEB01 - contoso\devuser 4/20/2021 1:40:52 PM (svcadmin)
+[session] WEB01 - contoso\WEB01$ 4/20/2021 5:51:43 PM (svcadmin)
+[session] WEB01 - contoso\devadmin 4/20/2021 09:54:38 AM (svcadmin)
+[session] WEB01 - contoso\devuser 4/20/2021 10:14:32 AM (svcadmin)
+```
 
 ### /registry
 Queries the [Win32_UserProfile class](https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ee886409(v=vs.85)) to retrieve SIDs for user profiles on a system.
 
 The [EnumKey method of the StdRegProv class](https://docs.microsoft.com/en-us/previous-versions/windows/desktop/regprov/enumkey-method-in-class-stdregprov) retrieves the `\\Computer\HKEY_USERS\` hive and attempts to access `Volatile Environment` for each returned SID to retrieve values from the `USERDOMAIN` and `USERNAME` keys.
+
+#### Example Output ran as svcadmin user
+```
+[registry] WEB01 - contoso\devadmin (svcadmin)
+```
+
+### /services
+Queries the [Win32_Service class](https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-service) to retrieve the name, user, and state of services
+
+#### Example Output ran as svcadmin user
+```
+[service] WEB01 - devadmin@consoso.com Service: secretsvc State: Running (svcadmin)
+```
 
 ## WinRM
 Each WMI checks is also implemented using [WMI Resources](https://docs.microsoft.com/en-us/windows/win32/winrm/querying-for-specific-instances-of-a-resource) and [WMI Enumeration](https://docs.microsoft.com/en-us/windows/win32/api/wsmandisp/nf-wsmandisp-iwsmansession-enumerate) over WinRM.
