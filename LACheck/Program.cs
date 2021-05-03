@@ -65,20 +65,12 @@ namespace LACheck
 
             foreach (KeyValuePair<string, string> host in hosts)
             {
-                if (arguments.rpc)
-                {
-                    // Note that we create the Action here, but do not start it.
-                    listOfChecks.Add(() => Enums.WMI.Check(host.Key, ns, wql, arguments));
-                }
-                if (arguments.smb)
-                {
-                    listOfChecks.Add(() => Enums.SMB.Check(host.Key, arguments));
-                }
-                if (arguments.winrm)
-                {
-                    listOfChecks.Add(() => Enums.WINRM.Check(host.Key, ns, wql, arguments));
-                }
+                // Note that we create the Action here, but do not start it.
+                listOfChecks.Add(() => EnumerateHost(host.Key, ns, wql, arguments));
             }
+            Utilities.Status.totalCount = hosts.Count();
+            Utilities.Status.currentCount = 0;
+            Utilities.Status.StartOutputTimer();
             //https://devblogs.microsoft.com/pfxteam/parallel-invoke-vs-explicit-task-management/
             var options = new ParallelOptions { MaxDegreeOfParallelism = arguments.threads };
             Parallel.Invoke(options, listOfChecks.ToArray());
@@ -90,6 +82,22 @@ namespace LACheck
                 Utilities.SessionInfo.ResolveSIDs(outputHosts, arguments);
                 Utilities.BloodHound.PrintOutput(outputHosts, arguments);
             }
+        }
+        public static void EnumerateHost(string host, string ns, string wql, Utilities.Arguments arguments)
+        {
+            if (arguments.rpc)
+            {
+                Enums.WMI.Check(host, ns, wql, arguments);
+            }
+            if (arguments.smb)
+            {
+                Enums.SMB.Check(host, arguments);
+            }
+            if (arguments.winrm)
+            {
+                Enums.WINRM.Check(host, ns, wql, arguments);
+            }
+            Utilities.Status.currentCount += 1;
         }
     }
 }

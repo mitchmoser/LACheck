@@ -173,11 +173,19 @@ namespace LACheck.Utilities
                     string SID = byteSID.ToString();
                     hosts.Add(ComputerName, SID);
                 }
-                //localhost returns false positives
-                hosts.Remove(System.Environment.MachineName);
-                Console.WriteLine("[+] OU Search Results: {0}", hosts.Count().ToString());
+
                 mySearcher.Dispose();
                 entry.Dispose();
+
+                //localhost returns false positives
+                hosts.Remove(System.Environment.MachineName);
+                // remove localhost where domain name is appended which breaks literal string matches
+                IEnumerable<string> startsWithHostname = hosts.Keys.Where(currentKey => currentKey.StartsWith(System.Environment.MachineName.ToUpper()));
+                foreach (string partialMatch in startsWithHostname.ToList())
+                {
+                    hosts.Remove(partialMatch);
+                }
+                Console.WriteLine("[+] OU Search Results: {0}", hosts.Count().ToString());
 
                 return hosts;
             }
@@ -245,11 +253,18 @@ namespace LACheck.Utilities
                     string SID = byteSID.ToString();
                     hosts.Add(ComputerName, SID);
                 }
+                globalCatalogSearcher.Dispose();
 
                 //localhost returns false positives
                 hosts.Remove(System.Environment.MachineName);
+                // remove localhost where domain name is appended which breaks literal string matches
+                IEnumerable<string> startsWithHostname = hosts.Keys.Where(currentKey => currentKey.StartsWith(System.Environment.MachineName.ToUpper()));
+                foreach (string partialMatch in startsWithHostname.ToList())
+                {
+                    hosts.Remove(partialMatch);
+                }
+
                 Console.WriteLine("[+] LDAP Search Results: {0}", hosts.Count.ToString());
-                globalCatalogSearcher.Dispose();
 
                 return hosts;
             }
@@ -259,7 +274,6 @@ namespace LACheck.Utilities
                 {
                     Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
                 }
-                Environment.Exit(0);
                 return null;
             }
         }

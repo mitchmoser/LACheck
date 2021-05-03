@@ -229,11 +229,11 @@ namespace LACheck.Enums
                     throw new NullReferenceException("ServiceName must contain a valid service name.");
 
                 IntPtr scManager = OpenSCManager(host, null, (int)SCManagerAccess.GENERIC_ALL);
-                if (scManager.ToInt64() <= 0)
+                if (scManager == null)
                     throw new Win32Exception();
 
                 IntPtr service = OpenService(scManager, ServiceName, (int)ServiceAccess.QUERY_CONFIG);
-                if (service.ToInt64() <= 0)
+                if (service == null)
                     throw new NullReferenceException();
 
                 int bytesNeeded = 5;

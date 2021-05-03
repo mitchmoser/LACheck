@@ -92,6 +92,7 @@
     <Compile Include="Utilities\SessionInfo.cs" />
     <Compile Include="Utilities\LDAP.cs" />
     <Compile Include="Utilities\Options.cs" />
+    <Compile Include="Utilities\Status.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
