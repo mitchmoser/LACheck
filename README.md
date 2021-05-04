@@ -99,6 +99,16 @@ The `/targets`, `/ldap`, and `/ou` flags can all be used together or seprately t
 
 All hosts returned from these flags are combined and deduplicated before enumeration starts.
 
+## Bloodhound
+LACheck supports writing AdminTo and Session collected into json output that can be uploaded to BloodHound
+
+This output is only meant to augment an existing BloodHound collection with updated Administrative privileges for a single user and Sessions collected from hosts that Administrative privileges have been identified
+
+The `/bloodhound` switch will write a randomly-named encrypted zip file to disk which can be downloaded, extracted, and uploaded to BloodHound
+
+### /user
+BloodHound requires resolving users and computers to SIDs. Due to impersonation techniques such as Cobalt Strike's `make_token` and `kerberos_ticket_use`, LACheck may not be able to accurately determine the user context for a collection. The `/user` arguement is required to supply LACheck with the userprincipalname (format = `samaccountname@domain.tld`) of the context it is ran under in order to accurately correlate the collection information.
+
 # Enumeration Methods
 ## Performance Summary
 | | SMB | WMI | WinRM |
@@ -109,16 +119,6 @@ All hosts returned from these flags are combined and deduplicated before enumera
 |/registry|slow| fast | - |
 
 \- = not implemented
-
-## Bloodhound
-LACheck supports writing AdminTo and Session collected into json output that can be uploaded to BloodHound
-
-This output is only meant to augment an existing BloodHound collection with updated Administrative privileges for a single user and Sessions collected from hosts that Administrative privileges have been identified
-
-The `/bloodhound` switch will write a randomly-named encrypted zip file to disk which can be downloaded, extracted, and uploaded to BloodHound
-
-### /user
-BloodHound requires resolving users and computers to SIDs. Due to impersonation techniques such as Cobalt Strike's `make_token` and `kerberos_ticket_use`, LACheck may not be able to accurately determine the user context for a collection. The `/user` arguement is required to supply LACheck with the userprincipalname (format = `samaccountname@domain.tld`) of the context it is ran under in order to accurately correlate the collection information.
 
 ## SMB
 ### /edr
