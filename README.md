@@ -75,11 +75,11 @@ execute-assembly /opt/SharpTools/LACheck smb rpc winrm /ldap:servers-exclude-dc 
 [session] WEB01 - contoso\devadmin (svcadmin)
 [session] WEB01 - contoso\devuser (svcadmin)
 [rdp] WEB01 - contoso\devadmin rdp-tcp#2 Active Last Connection: 00:00:50:26 Last Input: 00:00:00:00  (svcadmin)
-[session] WEB01 - contoso\devadmin (svcadmin)
-[session] WEB01 - contoso\devuser (svcadmin)
-[session] WEB01 - contoso\WEB01$ (svcadmin)
-[session] WEB01 - contoso\devadmin (svcadmin)
-[session] WEB01 - contoso\devuser (svcadmin)
+[session] WEB01 - contoso\devadmin  4/20/2021 11:00:05 AM (svcadmin)
+[session] WEB01 - contoso\devuser 4/20/2021 1:40:52 PM (svcadmin)
+[session] WEB01 - contoso\WEB01$ 4/20/2021 5:51:43 PM (svcadmin)
+[session] WEB01 - contoso\devadmin 4/20/2021 09:54:38 AM (svcadmin)
+[session] WEB01 - contoso\devuser 4/20/2021 10:14:32 AM (svcadmin)
 [WinRM] Admin Success: DESKTOP-118GDCE as svcadmin
 [WinRM] Admin Success: DEV02.contoso.com as svcadmin
 [!] RPC on DEV02.contoso.com - Access denied.
