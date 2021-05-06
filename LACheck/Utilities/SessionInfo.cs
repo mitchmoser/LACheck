@@ -47,15 +47,13 @@ namespace LACheck.Utilities
                 comp.computerSID = hosts[comp.hostname];
                 foreach (UserSession sess in comp.sessions)
                 {
-                    //reconstruct userprincipalname format of username@fqdn missing TLD
-                    string partialuserprincipalname = String.Format("{0}@{1}", sess.username, sess.domain).ToLower();
-                    
-                    //try resolving enumerated users to SIDs of enabled users
-                    if (users.Keys.Any(k => k.StartsWith(partialuserprincipalname)))
+                    string userprincipalname = String.Format("{0}@{1}", sess.username.ToLower(), sess.domain).ToLower();
+                    if (users.Keys.Contains(userprincipalname))
                     {
-                        sess.SID = users[users.Keys.Where(k => k.StartsWith(partialuserprincipalname)).FirstOrDefault()];
-                        //Console.WriteLine($"---User {sess.domain}\\{sess.username}:{sess.SID}");
+                        sess.SID = users[userprincipalname];
+                        //Console.WriteLine($"---User: {userprincipalname} SID: {sess.SID}");
                     }
+                    
                     //enumerated users that don't resolve will be removed
                     else
                     {

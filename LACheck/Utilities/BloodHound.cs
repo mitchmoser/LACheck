@@ -1,6 +1,8 @@
 ﻿using ICSharpCode.SharpZipLib.Zip;
 using Newtonsoft.Json;
 using System;
+using System.Net;
+using System.Net.Sockets;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,6 +12,7 @@ namespace LACheck.Utilities
 {
     class BloodHound
     {
+        public static Dictionary<string, string> NetBiosDomain = new Dictionary<string, string>();
         public class BloodHoundOutput
         {
             public List<Computer> computers = new List<Computer>();
@@ -68,7 +71,7 @@ namespace LACheck.Utilities
         {
             public static List<string> AdminSuccess = new List<string>();
         }
-        public static void PrintOutput(Dictionary<string, string> hosts, Utilities.Arguments arguments)
+        public static void GenerateOutput(Dictionary<string, string> hosts, Utilities.Arguments arguments)
         {
             string userSID = Utilities.LDAP.GetUserSID(arguments.user, arguments);
             List<Computer> jsonComputers = new List<Computer>();
@@ -81,7 +84,6 @@ namespace LACheck.Utilities
                 comp.ObjectIdentifier = compSID;
 
                 comp.Sessions = new List<SessionObj>();
-                SessionObj s = new SessionObj();
 
                 var hostname = Utilities.SessionInfo.AllComputerSessions.computers.Where(c => c.hostname.Equals(computer.Key));
 
@@ -92,6 +94,7 @@ namespace LACheck.Utilities
                     foreach (Utilities.SessionInfo.UserSession sess in host.sessions)
                     {
                         //Console.WriteLine($"***User {sess.domain}\\{sess.username}:{sess.SID}");
+                        SessionObj s = new SessionObj();
                         s.UserId = sess.SID;
                         s.ComputerId = host.computerSID;
                         comp.Sessions.Add(s);
@@ -123,16 +126,46 @@ namespace LACheck.Utilities
 
             string output = JsonConvert.SerializeObject(bh);
 
+            if (!String.IsNullOrEmpty(arguments.socket))
+                OutputTCPSocket(output, arguments);
+            else
+                OutputFile(output);
+        }
+        public static void OutputTCPSocket(string output, Utilities.Arguments arguments)
+        {
+            try
+            {
+                string ip = arguments.socket.Split(':')[0];
+                IPAddress ipAdd = IPAddress.Parse(ip); 
+                int port = Convert.ToInt32(arguments.socket.Split(':')[1]);
+                
+                TcpClient client = new TcpClient(ip, port);
+                byte[] data = Encoding.ASCII.GetBytes(output);
+                NetworkStream stream = client.GetStream();
+                stream.Write(data, 0, data.Length);
+                Console.WriteLine($"[+] Successfully sent output to TCP Socket: {arguments.socket}");
+                stream.Close();
+                client.Close();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[!] Error sending output over TCP Socket: {ex.Message}");
+                OutputFile(output);
+            }
+        }
+        public static void OutputFile(string output)
+        {
+
             /* try to write output in multiple places in case of permissions errors
              * 1) current directory
              * 2) C:\Users\<current user>\AppData\Local\Temp\
              * 3) C:\Users\Public\
              */
             List<string> outFileNames = new List<string>();
-            outFileNames.Add(Path.GetRandomFileName()); 
+            outFileNames.Add(Path.GetRandomFileName());
             outFileNames.Add(Path.GetTempPath() + Path.GetRandomFileName());
             outFileNames.Add("C:\\Users\\Public\\" + Path.GetRandomFileName());
-            
+
             foreach (string fileName in outFileNames)
             {
                 try

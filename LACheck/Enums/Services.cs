@@ -113,11 +113,11 @@ namespace LACheck.Enums
         private const uint SC_MANAGER_ALL_ACCESS = 0x000F003F;
         public static void GetServicesSMB(string host, Utilities.Arguments arguments)
         {
-            Utilities.SessionInfo.ComputerSessions computer = new Utilities.SessionInfo.ComputerSessions();
-            computer.hostname = host;
-
             try
             {
+                Utilities.SessionInfo.ComputerSessions computer = new Utilities.SessionInfo.ComputerSessions();
+                computer.hostname = host;
+
                 ServiceController[] services = ServiceController.GetServices(host);
                 foreach (ServiceController service in services)
                 {
@@ -126,14 +126,27 @@ namespace LACheck.Enums
                     if (!String.IsNullOrEmpty(svcInfo.startName) && !exclusions.Contains(svcInfo.startName.ToUpper()))
                     {
                         Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
-                        storedSession.username = svcInfo.startName.Split('@')[0];
-                        string domain = svcInfo.startName.Split('@')[1].Split('.')[svcInfo.startName.Split('@')[1].Split('.').Length - 2];
-                        storedSession.domain = domain;
+                        
+                        //username can be in netbios\samaccountname or userprincipalname format
+                        if (svcInfo.startName.Contains('@'))
+                        {
+                            storedSession.username = svcInfo.startName.Split('@')[0];
+                            storedSession.domain = svcInfo.startName.Split('@')[1];
+                        }
+                        if (svcInfo.startName.Contains('\\'))
+                        {
+                            storedSession.username = svcInfo.startName.Split('\\')[0];
+                            storedSession.domain = svcInfo.startName.Split('\\')[1];
+                            //resolve netbios name to fqdn if present
+                            if (Utilities.BloodHound.NetBiosDomain.ContainsKey(storedSession.domain.ToUpper()))
+                                storedSession.domain = Utilities.BloodHound.NetBiosDomain[storedSession.domain.ToUpper()];
+                        }
+
                         computer.sessions.Add(storedSession);
                         Console.WriteLine($"[service] {host} - {svcInfo.startName} Service: {service.ServiceName} State: {service.Status} ({arguments.user})");
                     }
                 }
-                
+                Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
             }
             catch (Exception ex)
             {
@@ -142,12 +155,14 @@ namespace LACheck.Enums
                     Console.WriteLine($"[!] {host} - Unable to query services: {ex.Message}");
                 }
             }
-            Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
         }
         public static void GetServicesWinRM(string host, Utilities.Arguments arguments)
         {
             try
             {
+                Utilities.SessionInfo.ComputerSessions computer = new Utilities.SessionInfo.ComputerSessions();
+                computer.hostname = host;
+
                 //https://bohops.com/2020/05/12/ws-management-com-another-approach-for-winrm-lateral-movement/
                 //https://github.com/bohops/WSMan-WinRM/blob/master/SharpWSManWinRM.cs
                 IWSManEx wsman = new WSMan();
@@ -171,12 +186,33 @@ namespace LACheck.Enums
                     // Exclude services running as local accounts
                     if (!exclusions.Contains(startName.ToUpper()))
                     {
-                        string systemName = doc.Descendants("SystemName").First().Value;
-                        string name = doc.Descendants("Name").First().Value;
+                        string username = null;
+                        string domain = null;
+                        if (startName.Contains('@'))
+                        {
+                            username = startName.Split('@')[0];
+                            domain = startName.Split('@')[1];
+                        }
+                        if (startName.Contains('\\'))
+                        {
+                            domain = startName.Split('\\')[0];
+                            //resolve netbios name to fqdn if present
+                            if (Utilities.BloodHound.NetBiosDomain.ContainsKey(domain.ToUpper()))
+                                domain = Utilities.BloodHound.NetBiosDomain[domain.ToUpper()];
+                            username = startName.Split('\\')[1];
+                        }
+                        
+                        Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
+                        storedSession.domain = domain;
+                        storedSession.username = username;
+                        computer.sessions.Add(storedSession);
+                        
+                        string serviceName = doc.Descendants("Name").First().Value;
                         string state = doc.Descendants("State").First().Value;
-                        Console.WriteLine($"[service] {systemName} - {startName} Service: {name} State: {state} ({arguments.user})");
+                        Console.WriteLine($"[service] {host} - {startName} Service: {serviceName} State: {state} ({arguments.user})");
                     }
                 }
+                Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
             }
             catch (Exception ex)
             {
@@ -196,6 +232,9 @@ namespace LACheck.Enums
 
             try
             {
+                Utilities.SessionInfo.ComputerSessions computer = new Utilities.SessionInfo.ComputerSessions();
+                computer.hostname = host;
+
                 scope.Connect();
                 //https://stackoverflow.com/questions/842533/in-c-sharp-how-do-i-query-the-list-of-running-services-on-a-windows-server
                 using (ManagementObjectSearcher searcher = new ManagementObjectSearcher(scope, query))
@@ -204,12 +243,35 @@ namespace LACheck.Enums
                     foreach (ManagementObject service in services)
                     {
                         // Exclude services running as local accounts
-                        if (!exclusions.Contains(service["StartName"].ToString().ToUpper()))
+                        string startName = service["StartName"].ToString();
+                        if (!exclusions.Contains(startName.ToUpper()))
                         {
+                            string username = null;
+                            string domain = null;
+                            if (startName.Contains('@'))
+                            {
+                                username = startName.Split('@')[0];
+                                domain = startName.Split('@')[1];
+                            }
+                            if (startName.Contains('\\'))
+                            {
+                                domain = startName.Split('\\')[0];
+                                //resolve netbios name to fqdn if present
+                                if (Utilities.BloodHound.NetBiosDomain.ContainsKey(domain.ToUpper()))
+                                    domain = Utilities.BloodHound.NetBiosDomain[domain.ToUpper()];
+                                username = startName.Split('\\')[1];
+                            }
+
+                            Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
+                            storedSession.domain = domain;
+                            storedSession.username = username;
+                            computer.sessions.Add(storedSession);
+
                             Console.WriteLine($"[service] {service["SystemName"]} - {service["StartName"]} Service: {service["Name"]} State: {service["State"]} ({arguments.user})");
                         }
                     }
                 }
+                Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
             }
             catch (Exception ex)
             {

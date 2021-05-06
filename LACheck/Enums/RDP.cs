@@ -202,6 +202,9 @@ namespace LACheck.Enums
                         WTSQuerySessionInformation(serverHandle, si.SessionID, WTS_INFO_CLASS.WTSSessionInfo, out wtsinfoPtr, out bytes);
 
                         string domain = Marshal.PtrToStringAnsi(domainPtr);
+                        //resolve netbios name to fqdn if present
+                        if (Utilities.BloodHound.NetBiosDomain.ContainsKey(domain.ToUpper()))
+                            domain = Utilities.BloodHound.NetBiosDomain[domain.ToUpper()];
                         string username = Marshal.PtrToStringAnsi(userPtr);
                         var wtsinfo = (WTSINFOA)Marshal.PtrToStructure(wtsinfoPtr, typeof(WTSINFOA));
                         DateTime collecionTime = DateTime.FromFileTimeUtc(wtsinfo.CurrentTimeUTC);

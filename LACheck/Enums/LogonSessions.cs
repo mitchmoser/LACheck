@@ -19,6 +19,7 @@ namespace LACheck.Enums
         public DateTime starttime;
         // get set to search through list of sessions by username
         public string username { get; set; }
+        public string userprincipalname { get; set; }
     }
     class LogonSessions
     {
@@ -31,17 +32,17 @@ namespace LACheck.Enums
             sessions = LogonSessionWinRM(sessions, host, arguments);
 
             //get distinct list of users from sessions
-            List<string> users = sessions.Select(x => x.username).Distinct().ToList();
+            List<string> userprincipalnames = sessions.Select(x => x.userprincipalname).Distinct().ToList();
             Utilities.SessionInfo.ComputerSessions computer = new Utilities.SessionInfo.ComputerSessions();
             computer.hostname = host;
-            foreach (string user in users)
+            foreach (string upns in userprincipalnames)
             {
-                // if /user argument was not specified 
-                // or /user argument does not match current enumerated session
-                if (String.IsNullOrEmpty(arguments.usershort) || user != arguments.usershort)
+                // winrm & wmi session enum includes the user that ran the query as a 'session'
+                // remove this false positive
+                if (upns != arguments.user)
                 {
                     //retrieve the most recent session for each distinct user
-                    Session sestime = sessions.Where(x => x.username == user).OrderByDescending(x => x.starttime).First();
+                    Session sestime = sessions.Where(x => x.userprincipalname == upns).OrderByDescending(x => x.starttime).First();
 
                     Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
                     storedSession.domain = sestime.domain;
@@ -94,6 +95,9 @@ namespace LACheck.Enums
                                 {
                                     case "Domain":
                                         temp.domain = selector.Value;
+                                        //resolve netbios name to fqdn if present
+                                        if (Utilities.BloodHound.NetBiosDomain.ContainsKey(temp.domain.ToUpper()))
+                                            temp.domain = Utilities.BloodHound.NetBiosDomain[temp.domain.ToUpper()];
                                         break;
                                     case "Name":
                                         temp.username = selector.Value;
@@ -102,6 +106,7 @@ namespace LACheck.Enums
                                         temp.logonid = selector.Value;
                                         break;
                                 }
+                                temp.userprincipalname = $"{temp.username}@{temp.domain}";
                             }
                         }
                         //skip SYSTEM and LOCAL SERVICE
@@ -174,7 +179,7 @@ namespace LACheck.Enums
             }
             return sessions;
         }
-        public static void GetSessionsWMI(string host, string username, string ns, Utilities.Arguments arguments)
+        public static void GetSessionsWMI(string host, string ns, Utilities.Arguments arguments)
         {
             
 
@@ -183,19 +188,20 @@ namespace LACheck.Enums
             sessions = LogonSessionWMI(sessions, host, ns, arguments);
 
             //get distinct list of users from sessions
-            List<string> users = sessions.Select(x => x.username).Distinct().ToList();
+            List<string> userprincipalnames = sessions.Select(x => x.userprincipalname).Distinct().ToList();
             Utilities.SessionInfo.ComputerSessions computer = new Utilities.SessionInfo.ComputerSessions();
             computer.hostname = host;
-            foreach (string user in users)
+            foreach (string upn in userprincipalnames)
             {
                 // if /user argument was not specified 
                 // or /user argument does not match current enumerated session
-                if (String.IsNullOrEmpty(username) || user != username)
+                if (upn != arguments.user)
                 {
                     //retrieve the most recent session for each distinct user
-                    Session sestime = sessions.Where(x => x.username == user).OrderByDescending(x => x.starttime).First();
-                    
+                    Session sestime = sessions.Where(x => x.userprincipalname == upn).OrderByDescending(x => x.starttime).First();
+
                     Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
+                    
                     storedSession.domain = sestime.domain;
                     storedSession.username = sestime.username;
                     computer.sessions.Add(storedSession);
@@ -229,9 +235,13 @@ namespace LACheck.Enums
                     foreach (ManagementObject user in users)
                     {
                         Session temp = new Session();
-                        temp.domain = regex.Matches(user["Antecedent"].ToString())[0].ToString().Replace("\"", "");
-                        temp.username = regex.Matches(user["Antecedent"].ToString())[1].ToString().Replace("\"", ""); ;
                         temp.logonid = regex.Matches(user["Dependent"].ToString())[0].ToString().Replace("\"", "");
+                        temp.username = regex.Matches(user["Antecedent"].ToString())[1].ToString().Replace("\"", "");
+                        temp.domain = regex.Matches(user["Antecedent"].ToString())[0].ToString().Replace("\"", "");
+                        //resolve netbios name to fqdn if present
+                        if (Utilities.BloodHound.NetBiosDomain.ContainsKey(temp.domain.ToUpper()))
+                            temp.domain = Utilities.BloodHound.NetBiosDomain[temp.domain.ToUpper()];
+                        temp.userprincipalname = $"{temp.username}@{temp.domain}";
                         //skip SYSTEM and LOCAL SERVICE
                         if (exclusions.Contains(temp.username.ToString()))
                         {

@@ -25,7 +25,7 @@ namespace LACheck.Enums
                 }
                 if (arguments.logons)
                 {
-                    Enums.LogonSessions.GetSessionsWMI(host, arguments.usershort, ns, arguments);
+                    Enums.LogonSessions.GetSessionsWMI(host, ns, arguments);
                 }
                 if (arguments.registry)
                 {

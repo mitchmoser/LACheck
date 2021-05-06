@@ -132,11 +132,19 @@ namespace LACheck.Enums
             computer.hostname = hostname;
             foreach (string user in loggedOnUsers)
             {
+                // user = netbios\samaccountname
+                string domain = user.Split('\\')[0];
+                string username = user.Split('\\')[1];
+                
+                //resolve netbios name to fqdn if present
+                if (Utilities.BloodHound.NetBiosDomain.ContainsKey(domain.ToUpper()))
+                    domain = Utilities.BloodHound.NetBiosDomain[domain.ToUpper()];
+                
                 Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
-                storedSession.domain = user.Split('\\')[0];
-                storedSession.username = user.Split('\\')[1];
+                storedSession.domain = domain;
+                storedSession.username = username;
                 computer.sessions.Add(storedSession);
-                Console.WriteLine($"[session] {hostname} - {user} ({arguments.user})");
+                Console.WriteLine($"[session] {hostname} - {domain}\\{username} ({arguments.user})");
             }
             Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
         }

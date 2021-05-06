@@ -10,6 +10,48 @@ namespace LACheck.Utilities
 {
     class LDAP
     {
+        public static Dictionary<string, string> GetNetbiosDomain()
+        {
+
+            try
+            {
+                //example distinguishedname: DC=child,DC=domain,DC=tld
+                string domainPattern = @"(?<=DC=)\w*";
+                Regex domainRegex = new Regex(domainPattern);
+                
+                //netbios:fqdn key:value pairs
+                Dictionary<string, string> netbiosToDomain = new Dictionary<string, string>();
+
+                Forest currentForest = Forest.GetCurrentForest();
+                GlobalCatalog globalCatalog = currentForest.FindGlobalCatalog();
+                DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
+
+                globalCatalogSearcher.Filter = ("objectClass=domain");
+                globalCatalogSearcher.PropertiesToLoad.Add("distinguishedname");
+                globalCatalogSearcher.PropertiesToLoad.Add("name");
+                globalCatalogSearcher.SizeLimit = int.MaxValue;
+                globalCatalogSearcher.PageSize = int.MaxValue;
+
+                foreach (SearchResult resultEntry in globalCatalogSearcher.FindAll())
+                {
+                    string netbios = resultEntry.Properties["name"][0].ToString().ToUpper();
+                    string distinguishedname = resultEntry.Properties["distinguishedname"][0].ToString();
+
+                    // DC=subdomian,DC=domain,DC=tld -> subdomain.domain.tld
+                    string domain = String.Join(".", domainRegex.Matches(distinguishedname).Cast<Match>().Select(m => m.Value));
+                    Console.WriteLine($"[+] Domain Found: {netbios} = {domain}");
+                    netbiosToDomain.Add(netbios, domain);
+                }
+                globalCatalogSearcher.Dispose();
+                globalCatalogSearcher.Dispose();
+                return netbiosToDomain;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
+                return null;
+            }
+        }
         public static string GetComputerSID(string host, bool verbose)
         {
             string SID = null;

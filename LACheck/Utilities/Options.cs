@@ -22,9 +22,9 @@ namespace LACheck.Utilities
         public int threads = 25;
         public string ldap = null;
         public string ou = null;
+        public string socket = null;
         public string targets = null;
         public string user = null;
-        public string usershort = null;
     }
     class Options
     {
@@ -53,6 +53,8 @@ Arguments:
     /logons     - return logged on users on a host (requires smb, rpc, or winrm)
     /registry   - enumerate sessions from registry hive (requires smb)
     /services   - return services running as users (requires smb, rpc, or winrm)
+    /socket     - send bloodhound output to TCP socket instead of writing to disk
+                  ex: ""127.0.0.1:8080""
     /targets    - comma-separated list of hostnames to check
     /threads    - specify maximum number of parallel threads (default=25)
     /user       - specify username that collection was run under (useful during token manipulation)
@@ -142,6 +144,10 @@ Arguments:
             {
                 arguments.ou = parsedArgs["/ou"][0];
             }
+            if (parsedArgs.ContainsKey("/socket"))
+            {
+                arguments.socket = parsedArgs["/socket"][0];
+            }
             if (parsedArgs.ContainsKey("/targets"))
             {
                 arguments.targets = parsedArgs["/targets"][0];
@@ -157,20 +163,7 @@ Arguments:
             }
             else
             {
-                arguments.user = Environment.UserName;
-            }
-            // WMI session enumeration includes the user that ran the query as a 'session' 
-            // remove this false positive 
-            try
-            {
-                // username is formatted as user@domain.fqdn
-                // strip off '@domain.fqdn'
-                // can fail if /user argument was not specified
-                arguments.usershort = arguments.user.Split('@')[0];
-            }
-            catch 
-            { 
-                arguments.usershort = arguments.user;
+                arguments.user = UserPrincipal.Current.UserPrincipalName;
             }
             if (parsedArgs.ContainsKey("/validate"))
             {
@@ -211,6 +204,7 @@ Arguments:
             Console.WriteLine("\t/services: {0}", args.services);
             Console.WriteLine("\t/ldap: {0}", args.ldap);
             Console.WriteLine("\t/ou: {0}", args.ou);
+            Console.WriteLine("\t/socket: {0}", args.socket);
             Console.WriteLine("\t/targets: {0}", args.targets);
             Console.WriteLine("\t/threads: {0}", args.threads);
             Console.WriteLine("\t/user: {0}", args.user);

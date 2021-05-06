@@ -52,7 +52,10 @@ namespace LACheck
                 Utilities.Options.Usage();
                 Environment.Exit(0);
             }
-            
+
+            Console.WriteLine($"[+] Resolving Netbios names to FQDN for parent/child domains in current forest");
+            Utilities.BloodHound.NetBiosDomain = Utilities.LDAP.GetNetbiosDomain();
+
             //https://docs.microsoft.com/en-us/windows/win32/wmisdk/wql-operators
             //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystem
             //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-logonsession
@@ -80,7 +83,7 @@ namespace LACheck
                 //filter dictionary of all resolved host:SID pairs only keeping hosts where Admin Checks succeeded
                 Dictionary<string, string> outputHosts = Utilities.BloodHound.LACheckSessions.AdminSuccess.Distinct().Where(i => hosts.ContainsKey(i)).ToDictionary(i => i, i => hosts[i]);
                 Utilities.SessionInfo.ResolveSIDs(outputHosts, arguments);
-                Utilities.BloodHound.PrintOutput(outputHosts, arguments);
+                Utilities.BloodHound.GenerateOutput(outputHosts, arguments);
             }
         }
         public static void EnumerateHost(string host, string ns, string wql, Utilities.Arguments arguments)
