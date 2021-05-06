@@ -237,87 +237,140 @@ namespace LACheck.Utilities
                 return null;
             }
         }
-        public static Dictionary<string, string> SearchLDAP(string filter, bool verbose)
+        public static Dictionary<string, string> SearchLDAP(string ldap, bool verbose)
         {
-            try
+            bool searchGlobalCatalog = true;
+            string description = null;
+            string filter = null;
+            
+            Dictionary<string, string> hosts = new Dictionary<string, string>();
+            
+            switch (ldap)
             {
-                Dictionary<string, string> hosts = new Dictionary<string, string>();
-                string description = "";
-
-                Forest currentForest = Forest.GetCurrentForest();
-                GlobalCatalog globalCatalog = currentForest.FindGlobalCatalog();
-                DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
-
-                //globalCatalogSearcher.PropertiesToLoad.Add("cn");
-                globalCatalogSearcher.PropertiesToLoad.Add("dnshostname");
-                globalCatalogSearcher.PropertiesToLoad.Add("objectsid");
-                //https://social.technet.microsoft.com/wiki/contents/articles/5392.active-directory-ldap-syntax-filters.aspx
-                //https://ldapwiki.com/wiki/Active%20Directory%20Computer%20Related%20LDAP%20Query
-                switch (filter)
-                {
-                    case "all":
-                        description = "all enabled computers with \"primary\" group \"Domain Computers\"";
-                        globalCatalogSearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))");
-                        break;
-                    case "dc":
-                        description = "all enabled Domain Controllers (not read-only DCs)";
-                        globalCatalogSearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(userAccountControl:1.2.840.113556.1.4.803:=8192))");
-                        break;
-                    case "exclude-dc":
-                        description = "all enabled computers that are not Domain Controllers or read-only DCs";
-                        globalCatalogSearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(!(userAccountControl:1.2.840.113556.1.4.803:=8192))(!(userAccountControl:1.2.840.113556.1.4.803:=67100867)))");
-                        break;
-                    case "servers":
-                        description = "all enabled servers";
-                        globalCatalogSearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(operatingSystem=*server*))");
-                        break;
-                    case "servers-exclude-dc":
-                        description = "all enabled servers excluding Domain Controllers or read-only DCs";
-                        globalCatalogSearcher.Filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(operatingSystem=*server*)(!(userAccountControl:1.2.840.113556.1.4.803:=8192))(!(userAccountControl:1.2.840.113556.1.4.803:=67100867)))");
-                        break;
-                    default:
-                        Console.WriteLine("[!] Invalid LDAP filter: {0}", filter);
-                        Utilities.Options.Usage();
-                        Environment.Exit(0);
-                        break;
-                }
-
-                globalCatalogSearcher.SizeLimit = int.MaxValue;
-                globalCatalogSearcher.PageSize = int.MaxValue;
-                Console.WriteLine("[+] Performing LDAP query for {0}...", description);
-                Console.WriteLine("[+] This may take some time depending on the size of the environment");
-                
-                foreach (SearchResult resEnt in globalCatalogSearcher.FindAll())
-                {
-                    //string ComputerName = resEnt.Properties["cn"][0].ToString();
-                    string ComputerName = resEnt.Properties["dnshostname"][0].ToString().ToUpper();
-                    SecurityIdentifier byteSID = new SecurityIdentifier((byte[])resEnt.Properties["objectSid"][0], 0);
-                    string SID = byteSID.ToString();
-                    hosts.Add(ComputerName, SID);
-                }
-                globalCatalogSearcher.Dispose();
-
-                //localhost returns false positives
-                hosts.Remove(System.Environment.MachineName);
-                // remove localhost where domain name is appended which breaks literal string matches
-                IEnumerable<string> startsWithHostname = hosts.Keys.Where(currentKey => currentKey.StartsWith(System.Environment.MachineName.ToUpper()));
-                foreach (string partialMatch in startsWithHostname.ToList())
-                {
-                    hosts.Remove(partialMatch);
-                }
-
-                Console.WriteLine("[+] LDAP Search Results: {0}", hosts.Count.ToString());
-
-                return hosts;
+                case "all":
+                    description = "all enabled computers with \"primary\" group \"Domain Computers\"";
+                    filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))");
+                    break;
+                case "dc":
+                    description = "all enabled Domain Controllers (not read-only DCs)";
+                    filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(userAccountControl:1.2.840.113556.1.4.803:=8192))");
+                    break;
+                case "exclude-dc":
+                    description = "all enabled computers that are not Domain Controllers or read-only DCs";
+                    filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(!(userAccountControl:1.2.840.113556.1.4.803:=8192))(!(userAccountControl:1.2.840.113556.1.4.803:=67100867)))");
+                    break;
+                case "servers":
+                    searchGlobalCatalog = false; //operatingSystem attribute is not replicated in Global Catalog
+                    description = "all enabled servers";
+                    filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(operatingSystem=*server*))");
+                    break;
+                case "servers-exclude-dc":
+                    searchGlobalCatalog = false; //operatingSystem attribute is not replicated in Global Catalog
+                    description = "all enabled servers excluding Domain Controllers or read-only DCs";
+                    filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(operatingSystem=*server*)(!(userAccountControl:1.2.840.113556.1.4.803:=8192))(!(userAccountControl:1.2.840.113556.1.4.803:=67100867)))");
+                    break;
+                default:
+                    Console.WriteLine("[!] Invalid LDAP filter: {0}", filter);
+                    Utilities.Options.Usage();
+                    Environment.Exit(0);
+                    break;
             }
-            catch (Exception ex)
+            if (searchGlobalCatalog)
             {
-                if (verbose)
+                try
                 {
-                    Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
+                    Forest currentForest = Forest.GetCurrentForest();
+                    GlobalCatalog globalCatalog = currentForest.FindGlobalCatalog();
+                    DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
+
+                    //globalCatalogSearcher.PropertiesToLoad.Add("cn");
+                    globalCatalogSearcher.PropertiesToLoad.Add("dnshostname");
+                    globalCatalogSearcher.PropertiesToLoad.Add("objectsid");
+                    //https://social.technet.microsoft.com/wiki/contents/articles/5392.active-directory-ldap-syntax-filters.aspx
+                    //https://ldapwiki.com/wiki/Active%20Directory%20Computer%20Related%20LDAP%20Query
+                    globalCatalogSearcher.Filter = filter;
+                    globalCatalogSearcher.SizeLimit = int.MaxValue;
+                    globalCatalogSearcher.PageSize = int.MaxValue;
+                    Console.WriteLine("[+] Performing LDAP query against Global Catalog for {0}...", description);
+                    Console.WriteLine("[+] This may take some time depending on the size of the environment");
+
+                    foreach (SearchResult resEnt in globalCatalogSearcher.FindAll())
+                    {
+                        //sometimes objects with empty attributes throw errors
+                        try
+                        {
+                            //string ComputerName = resEnt.Properties["cn"][0].ToString();
+                            string ComputerName = resEnt.Properties["dnshostname"][0].ToString().ToUpper();
+                            SecurityIdentifier byteSID = new SecurityIdentifier((byte[])resEnt.Properties["objectSid"][0], 0);
+                            string SID = byteSID.ToString();
+                            hosts.Add(ComputerName, SID);
+                        }
+                        catch { /*nothing*/ }
+                    }
+                    globalCatalogSearcher.Dispose();
                 }
-                return null;
+                catch (Exception ex)
+                {
+                    if (verbose)
+                    {
+                        Console.WriteLine("[!] LDAP Error searching Global Catalog: {0}", ex.Message);
+                    }
+                }
             }
+            else
+            {
+                Console.WriteLine("not searching global catalog");
+                try
+                {
+                    DirectoryEntry entry = new DirectoryEntry();
+                    DirectorySearcher mySearcher = new DirectorySearcher(entry);
+
+                    //globalCatalogSearcher.PropertiesToLoad.Add("cn");
+                    mySearcher.PropertiesToLoad.Add("dnshostname");
+                    mySearcher.PropertiesToLoad.Add("objectsid");
+                    //https://social.technet.microsoft.com/wiki/contents/articles/5392.active-directory-ldap-syntax-filters.aspx
+                    //https://ldapwiki.com/wiki/Active%20Directory%20Computer%20Related%20LDAP%20Query
+                    mySearcher.Filter = filter;
+                    mySearcher.SizeLimit = int.MaxValue;
+                    mySearcher.PageSize = int.MaxValue;
+                    Console.WriteLine("[+] Performing LDAP query against the current domain for {0}...", description);
+                    Console.WriteLine("[+] This may take some time depending on the size of the environment");
+
+                    foreach (SearchResult resEnt in mySearcher.FindAll())
+                    {
+                        //sometimes objects with empty attributes throw errors
+                        try
+                        {
+                            //string ComputerName = resEnt.Properties["cn"][0].ToString();
+                            string ComputerName = resEnt.Properties["dnshostname"][0].ToString().ToUpper();
+                            SecurityIdentifier byteSID = new SecurityIdentifier((byte[])resEnt.Properties["objectSid"][0], 0);
+                            string SID = byteSID.ToString();
+                            hosts.Add(ComputerName, SID);
+                        }
+                        catch { /*nothing*/ }
+                    }
+                    mySearcher.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    if (verbose)
+                    {
+                        Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
+                    }
+                }
+            }
+            //localhost returns false positives
+            hosts.Remove(System.Environment.MachineName);
+            // remove localhost where domain name is appended which breaks literal string matches
+            IEnumerable<string> startsWithHostname = hosts.Keys.Where(currentKey => currentKey.StartsWith(System.Environment.MachineName.ToUpper()));
+            foreach (string partialMatch in startsWithHostname.ToList())
+            {
+                hosts.Remove(partialMatch);
+            }
+
+            Console.WriteLine("[+] LDAP Search Results: {0}", hosts.Count.ToString());
+
+            return hosts;
         }
     }
 }
