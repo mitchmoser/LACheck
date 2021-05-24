@@ -174,7 +174,7 @@ namespace LACheck.Utilities
                     {
                         //Set level to 9, maximum compressions
                         zipStream.SetLevel(9);
-                        string password = Path.GetRandomFileName().Split('.')[0];
+                        string password = Path.GetRandomFileName().Replace(".", string.Empty);
                         zipStream.Password = password;
                         Console.WriteLine($"Compressing zip files to {fileName}");
 

@@ -96,7 +96,7 @@ namespace LACheck.Utilities
                 DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
 
                 globalCatalogSearcher.PropertiesToLoad.Add("objectsid");
-                // filter for userprincipalname (format = username@domain.fqdn)
+                // filter for userprincipalname (format = samaccountname@domain.fqdn)
                 globalCatalogSearcher.Filter = (String.Format("(&(objectCategory=user)(userprincipalname={0}))", user));
                 globalCatalogSearcher.SizeLimit = int.MaxValue;
                 globalCatalogSearcher.PageSize = int.MaxValue;
@@ -172,11 +172,19 @@ namespace LACheck.Utilities
                     }
                     if (!String.IsNullOrEmpty(UserName))
                     {
-                        //UserName = resEnt.Properties["userprincipalname"][0].ToString();
-                        SecurityIdentifier byteSID = new SecurityIdentifier((byte[])resEnt.Properties["objectSid"][0], 0);
-                        string SID = byteSID.ToString();
-                        users.Add(UserName, SID);
-                        //Console.WriteLine($"---({users.Count.ToString()}) {UserName}:{SID}");
+                        try
+                        {
+                            SecurityIdentifier byteSID = new SecurityIdentifier((byte[])resEnt.Properties["objectSid"][0], 0);
+                            string SID = byteSID.ToString();
+                            users.Add(UserName, SID);
+                            //Console.WriteLine($"---({users.Count.ToString()}) {UserName}:{SID}");
+                        }
+                        catch
+                        {
+                            Console.WriteLine($"[!] LDAP Error Retrieving SID for {UserName}. No sessions will be correlated for this user.");
+                        }
+
+
                     }
                 }
 
