@@ -143,7 +143,7 @@ namespace LACheck.Enums
                         }
 
                         computer.sessions.Add(storedSession);
-                        Console.WriteLine($"[service] {host} - {svcInfo.startName} Service: {service.ServiceName} State: {service.Status} ({arguments.user})");
+                        Console.WriteLine($"[service] {host} - {storedSession.domain}\\{storedSession.username} Service: {service.ServiceName} State: {service.Status} ({arguments.user})");
                     }
                 }
                 Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
@@ -209,7 +209,7 @@ namespace LACheck.Enums
                         
                         string serviceName = doc.Descendants("Name").First().Value;
                         string state = doc.Descendants("State").First().Value;
-                        Console.WriteLine($"[service] {host} - {startName} Service: {serviceName} State: {state} ({arguments.user})");
+                        Console.WriteLine($"[service] {host} - {storedSession.domain}\\{storedSession.username} Service: {serviceName} State: {state} ({arguments.user})");
                     }
                 }
                 Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
@@ -267,7 +267,7 @@ namespace LACheck.Enums
                             storedSession.username = username;
                             computer.sessions.Add(storedSession);
 
-                            Console.WriteLine($"[service] {service["SystemName"]} - {service["StartName"]} Service: {service["Name"]} State: {service["State"]} ({arguments.user})");
+                            Console.WriteLine($"[service] {host} - {storedSession.domain}\\{storedSession.username} Service: {service["Name"]} State: {service["State"]} ({arguments.user})");
                         }
                     }
                 }

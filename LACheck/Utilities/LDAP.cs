@@ -135,7 +135,7 @@ namespace LACheck.Utilities
 
                 //userprincipalname = samaccountname@domain.fqdn format
                 //does not exist for MSAs or built-in Administrator
-                globalCatalogSearcher.PropertiesToLoad.Add("userprincipalname");
+                //globalCatalogSearcher.PropertiesToLoad.Add("userprincipalname");
                 //distinguishedname = CN=Administrator,CN=Users,DC=domain,DC=tld format
                 globalCatalogSearcher.PropertiesToLoad.Add("distinguishedname");
                 globalCatalogSearcher.PropertiesToLoad.Add("samaccountname");
@@ -148,43 +148,42 @@ namespace LACheck.Utilities
 
                 // filter for all enabled users & managed service accounts
                 //globalCatalogSearcher.Filter = ("(&(objectCategory=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))");
-                globalCatalogSearcher.Filter = ("(&(|(objectclass=msDS-ManagedServiceAccount)(objectCategory=user))(!(userAccountControl:1.2.840.113556.1.4.803:=2)))");
+                globalCatalogSearcher.Filter = ("(&(|(objectclass=msDS-ManagedServiceAccount)(objectCategory=user))(!(userAccountControl:1.2.840.113556.1.4.803:=2))(samaccountname=*)(distinguishedname=*)(objectsid=*))");
                 globalCatalogSearcher.SizeLimit = int.MaxValue;
                 globalCatalogSearcher.PageSize = int.MaxValue;
                 
                 foreach (SearchResult resEnt in globalCatalogSearcher.FindAll())
                 {
                     string UserName = null;
+                    string samaccountname = null;
+                    string distinguishedname = null;
                     try
                     {
-                        //works for standard user accounts - not Administrator or MSAs
-                        UserName = resEnt.Properties["userprincipalname"][0].ToString();
-                    }
-                    catch 
-                    {
-                        //for Administrator and MSA accounts
-                        string distinguishedname = resEnt.Properties["distinguishedname"][0].ToString();
-                        string samaccountname = resEnt.Properties["samaccountname"][0].ToString();
+                        samaccountname = resEnt.Properties["samaccountname"][0].ToString();
+                        distinguishedname = resEnt.Properties["distinguishedname"][0].ToString();
                         //join all portions of domain in the distinguishedname
                         // DC=subdomian,DC=domain,DC=tld -> subdomain.domain.tld
                         string domain = String.Join(".", domainRegex.Matches(distinguishedname).Cast<Match>().Select(m => m.Value));
                         UserName = $"{samaccountname}@{domain}".ToLower();
+                        
+                        if (!String.IsNullOrEmpty(UserName))
+                        {
+                            try
+                            {
+                                SecurityIdentifier byteSID = new SecurityIdentifier((byte[])resEnt.Properties["objectSid"][0], 0);
+                                string SID = byteSID.ToString();
+                                users.Add(UserName, SID);
+                                //Console.WriteLine($"---({users.Count.ToString()}) {UserName}:{SID}");
+                            }
+                            catch
+                            {
+                                Console.WriteLine($"[!] LDAP Error Retrieving SID for {UserName}. No sessions will be correlated for this user.");
+                            }
+                        }
                     }
-                    if (!String.IsNullOrEmpty(UserName))
+                    catch 
                     {
-                        try
-                        {
-                            SecurityIdentifier byteSID = new SecurityIdentifier((byte[])resEnt.Properties["objectSid"][0], 0);
-                            string SID = byteSID.ToString();
-                            users.Add(UserName, SID);
-                            //Console.WriteLine($"---({users.Count.ToString()}) {UserName}:{SID}");
-                        }
-                        catch
-                        {
-                            Console.WriteLine($"[!] LDAP Error Retrieving SID for {UserName}. No sessions will be correlated for this user.");
-                        }
-
-
+                        Console.WriteLine($"[!] LDAP Error Retrieving User Information for {samaccountname}. No sessions will be correlated for this user.");
                     }
                 }
 
