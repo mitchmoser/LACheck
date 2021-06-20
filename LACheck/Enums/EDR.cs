@@ -181,11 +181,11 @@ namespace LACheck.Enums
 
                 if (matches.Any())
                 {
-                    Console.WriteLine($"[EDR] {host} - Found: {String.Join(", ", matches.ToArray())} ({arguments.user})");
+                    Console.WriteLine($"[EDR] {host} - Found: {String.Join(", ", matches.ToArray())} ({arguments.userprincipalname})");
                 }
                 else
                 {
-                    Console.WriteLine($"[EDR] {host} - no EDR found ({arguments.user})");
+                    Console.WriteLine($"[EDR] {host} - no EDR found ({arguments.userprincipalname})");
                 }
                 
             }
@@ -236,11 +236,11 @@ namespace LACheck.Enums
 
                 if (matches.Any())
                 {
-                    Console.WriteLine($"[EDR] {host} - Found: {String.Join(", ", matches.ToArray())} ({arguments.user})");
+                    Console.WriteLine($"[EDR] {host} - Found: {String.Join(", ", matches.ToArray())} ({arguments.userprincipalname})");
                 }
                 else
                 {
-                    Console.WriteLine($"[EDR] {host} - no EDR found ({arguments.user})");
+                    Console.WriteLine($"[EDR] {host} - no EDR found ({arguments.userprincipalname})");
                 }
             }
             catch (Exception ex)
@@ -289,11 +289,11 @@ namespace LACheck.Enums
 
                     if (matches.Any())
                     {
-                        Console.WriteLine($"[EDR] {host} - Found: {String.Join(", ", matches.ToArray())} ({arguments.user})");
+                        Console.WriteLine($"[EDR] {host} - Found: {String.Join(", ", matches.ToArray())} ({arguments.userprincipalname})");
                     }
                     else
                     {
-                        Console.WriteLine($"[EDR] {host} - no EDR found ({arguments.user})");
+                        Console.WriteLine($"[EDR] {host} - no EDR found ({arguments.userprincipalname})");
                     }
                 }
             }

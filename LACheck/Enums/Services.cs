@@ -125,25 +125,30 @@ namespace LACheck.Enums
                     ServiceInfo svcInfo = GetServiceInfo(service.ServiceName, host, arguments);
                     if (!String.IsNullOrEmpty(svcInfo.startName) && !exclusions.Contains(svcInfo.startName.ToUpper()))
                     {
-                        Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
-                        
+                        string username = null;
+                        string domain = null;
                         //username can be in netbios\samaccountname or userprincipalname format
                         if (svcInfo.startName.Contains('@'))
                         {
-                            storedSession.username = svcInfo.startName.Split('@')[0];
-                            storedSession.domain = svcInfo.startName.Split('@')[1];
+                            string NetBiosName = Utilities.LDAP.ConvertUserPrincipalNameToNetbios(svcInfo.startName, arguments);
+                            if (!String.IsNullOrEmpty(NetBiosName))
+                            {
+                                domain = NetBiosName.Split('\\')[0]; 
+                                username = NetBiosName.Split('\\')[1];
+                                
+                            }
                         }
                         if (svcInfo.startName.Contains('\\'))
                         {
-                            storedSession.username = svcInfo.startName.Split('\\')[0];
-                            storedSession.domain = svcInfo.startName.Split('\\')[1];
-                            //resolve netbios name to fqdn if present
-                            if (Utilities.BloodHound.NetBiosDomain.ContainsKey(storedSession.domain.ToUpper()))
-                                storedSession.domain = Utilities.BloodHound.NetBiosDomain[storedSession.domain.ToUpper()];
+                            domain = svcInfo.startName.Split('\\')[0];
+                            username = svcInfo.startName.Split('\\')[1];
                         }
-
+                        
+                        Utilities.SessionInfo.UserSession storedSession = new Utilities.SessionInfo.UserSession();
+                        storedSession.username = username;
+                        storedSession.domain = domain;
                         computer.sessions.Add(storedSession);
-                        Console.WriteLine($"[service] {host} - {storedSession.domain}\\{storedSession.username} Service: {service.ServiceName} State: {service.Status} ({arguments.user})");
+                        Console.WriteLine($"[service] {host} - {storedSession.domain}\\{storedSession.username} Service: {service.ServiceName} State: {service.Status} ({arguments.userprincipalname})");
                     }
                 }
                 Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
@@ -190,15 +195,18 @@ namespace LACheck.Enums
                         string domain = null;
                         if (startName.Contains('@'))
                         {
-                            username = startName.Split('@')[0];
-                            domain = startName.Split('@')[1];
+                            //convert userprincipalname (samaccountname@fqdn.tld) to NETBIOS\samaccountname
+                            string NetBiosName = Utilities.LDAP.ConvertUserPrincipalNameToNetbios(startName, arguments);
+                            //if conversion fails, NetBiosName will be null
+                            if (!String.IsNullOrEmpty(NetBiosName))
+                            {
+                                domain = NetBiosName.Split('\\')[0];
+                                username = NetBiosName.Split('\\')[1];
+                            }
                         }
                         if (startName.Contains('\\'))
                         {
                             domain = startName.Split('\\')[0];
-                            //resolve netbios name to fqdn if present
-                            if (Utilities.BloodHound.NetBiosDomain.ContainsKey(domain.ToUpper()))
-                                domain = Utilities.BloodHound.NetBiosDomain[domain.ToUpper()];
                             username = startName.Split('\\')[1];
                         }
                         
@@ -209,7 +217,7 @@ namespace LACheck.Enums
                         
                         string serviceName = doc.Descendants("Name").First().Value;
                         string state = doc.Descendants("State").First().Value;
-                        Console.WriteLine($"[service] {host} - {storedSession.domain}\\{storedSession.username} Service: {serviceName} State: {state} ({arguments.user})");
+                        Console.WriteLine($"[service] {host} - {storedSession.domain}\\{storedSession.username} Service: {serviceName} State: {state} ({arguments.userprincipalname})");
                     }
                 }
                 Utilities.SessionInfo.AllComputerSessions.computers.Add(computer);
@@ -250,15 +258,16 @@ namespace LACheck.Enums
                             string domain = null;
                             if (startName.Contains('@'))
                             {
-                                username = startName.Split('@')[0];
-                                domain = startName.Split('@')[1];
+                                string NetBiosName = Utilities.LDAP.ConvertUserPrincipalNameToNetbios(startName, arguments);
+                                if (!String.IsNullOrEmpty(NetBiosName))
+                                {
+                                    domain = NetBiosName.Split('\\')[0];
+                                    username = NetBiosName.Split('\\')[1];
+                                }
                             }
                             if (startName.Contains('\\'))
                             {
                                 domain = startName.Split('\\')[0];
-                                //resolve netbios name to fqdn if present
-                                if (Utilities.BloodHound.NetBiosDomain.ContainsKey(domain.ToUpper()))
-                                    domain = Utilities.BloodHound.NetBiosDomain[domain.ToUpper()];
                                 username = startName.Split('\\')[1];
                             }
 
@@ -267,7 +276,7 @@ namespace LACheck.Enums
                             storedSession.username = username;
                             computer.sessions.Add(storedSession);
 
-                            Console.WriteLine($"[service] {host} - {storedSession.domain}\\{storedSession.username} Service: {service["Name"]} State: {service["State"]} ({arguments.user})");
+                            Console.WriteLine($"[service] {host} - {storedSession.domain}\\{storedSession.username} Service: {service["Name"]} State: {service["State"]} ({arguments.userprincipalname})");
                         }
                     }
                 }

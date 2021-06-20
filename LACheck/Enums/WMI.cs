@@ -17,7 +17,7 @@ namespace LACheck.Enums
                 {
                     ManagementObjectCollection test = searcher.Get();
                 }
-                Console.WriteLine($"[RPC] Admin Success: {host} as {arguments.user}");
+                Console.WriteLine($"[RPC] Admin Success: {host} as {arguments.userprincipalname}");
                 Utilities.BloodHound.LACheckSessions.AdminSuccess.Add(host);
                 if (arguments.edr)
                 {

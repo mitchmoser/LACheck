@@ -84,7 +84,13 @@ namespace LACheck.Enums
                         RegistryKey key = baseKey.OpenSubKey(target);
                         string domain = key.GetValue("USERDOMAIN").ToString();
                         string username = key.GetValue("USERNAME").ToString();
-                        Console.WriteLine($"[registry] {host} - {domain}\\{username} ({arguments.user})");
+                        string userprincipalname = $"{username}@{domain}";
+                        string netbiosuser = Utilities.LDAP.ConvertUserPrincipalNameToNetbios(userprincipalname, arguments);
+                        if (!String.IsNullOrEmpty(netbiosuser))
+                        {
+                            domain = netbiosuser.Split('\\')[0];
+                        }
+                        Console.WriteLine($"[registry] {host} - {domain}\\{username} ({arguments.userprincipalname})");
                     }
                     catch
                     {
@@ -208,7 +214,15 @@ namespace LACheck.Enums
                     }
 
                     if (!String.IsNullOrEmpty(domain) && !String.IsNullOrEmpty(username))
-                        Console.WriteLine($"[registry] {host} - {domain}\\{username} ({arguments.user})");
+                    {
+                        string userprincipalname = $"{username}@{domain}";
+                        string netbiosuser = Utilities.LDAP.ConvertUserPrincipalNameToNetbios(userprincipalname, arguments);
+                        if (!String.IsNullOrEmpty(netbiosuser))
+                        {
+                            domain = netbiosuser.Split('\\')[0];
+                        }
+                        Console.WriteLine($"[registry] {host} - {domain}\\{username} ({arguments.userprincipalname})");
+                    }
                 }
 
             }

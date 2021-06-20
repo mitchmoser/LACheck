@@ -12,7 +12,7 @@ namespace LACheck.Enums
             {
                 string share = "\\\\" + host + "\\C$";
                 System.Security.AccessControl.DirectorySecurity ds = Directory.GetAccessControl(share);
-                Console.WriteLine($"[SMB] Admin Success: {host} as {arguments.user}");
+                Console.WriteLine($"[SMB] Admin Success: {host} as {arguments.userprincipalname}");
                 Utilities.BloodHound.LACheckSessions.AdminSuccess.Add(host);
                 if (arguments.edr)
                 {

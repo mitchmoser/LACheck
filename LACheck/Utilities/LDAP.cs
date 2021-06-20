@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ActiveDs; // COM Library
+using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.DirectoryServices.ActiveDirectory;
@@ -10,48 +11,6 @@ namespace LACheck.Utilities
 {
     class LDAP
     {
-        public static Dictionary<string, string> GetNetbiosDomain()
-        {
-
-            try
-            {
-                //example distinguishedname: DC=child,DC=domain,DC=tld
-                string domainPattern = @"(?<=DC=)\w*";
-                Regex domainRegex = new Regex(domainPattern);
-                
-                //netbios:fqdn key:value pairs
-                Dictionary<string, string> netbiosToDomain = new Dictionary<string, string>();
-
-                Forest currentForest = Forest.GetCurrentForest();
-                GlobalCatalog globalCatalog = currentForest.FindGlobalCatalog();
-                DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
-
-                globalCatalogSearcher.Filter = ("objectClass=domain");
-                globalCatalogSearcher.PropertiesToLoad.Add("distinguishedname");
-                globalCatalogSearcher.PropertiesToLoad.Add("name");
-                globalCatalogSearcher.SizeLimit = int.MaxValue;
-                globalCatalogSearcher.PageSize = int.MaxValue;
-
-                foreach (SearchResult resultEntry in globalCatalogSearcher.FindAll())
-                {
-                    string netbios = resultEntry.Properties["name"][0].ToString().ToUpper();
-                    string distinguishedname = resultEntry.Properties["distinguishedname"][0].ToString();
-
-                    // DC=subdomian,DC=domain,DC=tld -> subdomain.domain.tld
-                    string domain = String.Join(".", domainRegex.Matches(distinguishedname).Cast<Match>().Select(m => m.Value));
-                    Console.WriteLine($"[+] Domain Found: {netbios} = {domain}");
-                    netbiosToDomain.Add(netbios, domain);
-                }
-                globalCatalogSearcher.Dispose();
-                globalCatalogSearcher.Dispose();
-                return netbiosToDomain;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
-                return null;
-            }
-        }
         public static string GetComputerSID(string host, bool verbose)
         {
             string SID = null;
@@ -122,7 +81,7 @@ namespace LACheck.Utilities
                 return SID;
             }
         }
-        public static Dictionary<string, string> GetUserSIDs(bool verbose)
+        public static Dictionary<string, string> GetUserSIDs(Arguments arguments)
         {
             Dictionary<string, string> users = new Dictionary<string, string>();
 
@@ -165,7 +124,9 @@ namespace LACheck.Utilities
                         // DC=subdomian,DC=domain,DC=tld -> subdomain.domain.tld
                         string domain = String.Join(".", domainRegex.Matches(distinguishedname).Cast<Match>().Select(m => m.Value));
                         UserName = $"{samaccountname}@{domain}".ToLower();
-                        
+                        UserName = ConvertUserPrincipalNameToNetbios(UserName, arguments);
+
+
                         if (!String.IsNullOrEmpty(UserName))
                         {
                             try
@@ -197,6 +158,21 @@ namespace LACheck.Utilities
             }
 
             return users;
+        }
+        public static string ConvertUserPrincipalNameToNetbios(string userprincipalname, Arguments arguments)
+        {
+            try
+            {
+                NameTranslate nameTranslate = new NameTranslate();
+                nameTranslate.Set((int)ADS_NAME_TYPE_ENUM.ADS_NAME_TYPE_USER_PRINCIPAL_NAME, userprincipalname);
+                return nameTranslate.Get((int)ADS_NAME_TYPE_ENUM.ADS_NAME_TYPE_NT4).ToLower();
+            }
+            catch (Exception ex)
+            {
+                if (arguments.verbose)
+                    Console.WriteLine($"[!] Error Converting userprincipalname {userprincipalname}: {ex.Message}");
+                return null;
+            }
         }
         public static Dictionary<string, string> SearchOU(string ou, bool verbose)
         {

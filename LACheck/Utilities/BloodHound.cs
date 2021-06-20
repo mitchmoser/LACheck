@@ -12,7 +12,6 @@ namespace LACheck.Utilities
 {
     class BloodHound
     {
-        public static Dictionary<string, string> NetBiosDomain = new Dictionary<string, string>();
         public class BloodHoundOutput
         {
             public List<Computer> computers = new List<Computer>();
@@ -73,7 +72,7 @@ namespace LACheck.Utilities
         }
         public static void GenerateOutput(Dictionary<string, string> hosts, Utilities.Arguments arguments)
         {
-            string userSID = Utilities.LDAP.GetUserSID(arguments.user, arguments);
+            string userSID = Utilities.LDAP.GetUserSID(arguments.userprincipalname, arguments);
             List<Computer> jsonComputers = new List<Computer>();
 
             foreach (KeyValuePair<string, string> computer in hosts)

@@ -39,7 +39,7 @@ namespace LACheck.Utilities
              * Each session on the host resolves the user to an enabled user's SID
              * Any user that does not resolve to a SID is removed from the session list
              */
-            Dictionary<string, string> users = Utilities.LDAP.GetUserSIDs(arguments.verbose);
+            Dictionary<string, string> users = Utilities.LDAP.GetUserSIDs(arguments);
             List<UserSession> unresolvable = new List<UserSession>();
             foreach (ComputerSessions comp in AllComputerSessions.computers)
             {
@@ -47,11 +47,11 @@ namespace LACheck.Utilities
                 comp.computerSID = hosts[comp.hostname];
                 foreach (UserSession sess in comp.sessions)
                 {
-                    string userprincipalname = String.Format("{0}@{1}", sess.username.ToLower(), sess.domain).ToLower();
-                    if (users.Keys.Contains(userprincipalname))
+                    string netbiosuser = $"{sess.domain}\\{sess.username}".ToLower();
+                    if (users.Keys.Contains(netbiosuser))
                     {
-                        sess.SID = users[userprincipalname];
-                        //Console.WriteLine($"---User: {userprincipalname} SID: {sess.SID}");
+                        sess.SID = users[netbiosuser];
+                        //Console.WriteLine($"---User: {netbiosuser} SID: {sess.SID}");
                     }
                     
                     //enumerated users that don't resolve will be removed

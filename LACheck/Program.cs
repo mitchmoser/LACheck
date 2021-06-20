@@ -53,9 +53,6 @@ namespace LACheck
                 Environment.Exit(0);
             }
 
-            Console.WriteLine($"[+] Resolving Netbios names to FQDN for parent/child domains in current forest");
-            Utilities.BloodHound.NetBiosDomain = Utilities.LDAP.GetNetbiosDomain();
-
             //https://docs.microsoft.com/en-us/windows/win32/wmisdk/wql-operators
             //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-computersystem
             //https://docs.microsoft.com/en-us/windows/win32/cimwin32prov/win32-logonsession

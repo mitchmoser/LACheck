@@ -38,7 +38,7 @@ namespace LACheck.Enums
                 }
                 if (results != "")
                 {
-                    Console.WriteLine($"[WinRM] Admin Success: {host} as {arguments.user}");
+                    Console.WriteLine($"[WinRM] Admin Success: {host} as {arguments.userprincipalname}");
                     Utilities.BloodHound.LACheckSessions.AdminSuccess.Add(host);
                     if (arguments.edr)
                     {

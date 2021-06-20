@@ -106,6 +106,15 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
+    <COMReference Include="ActiveDs">
+      <Guid>{97D25DB0-0363-11CF-ABC4-02608C9E7553}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
     <COMReference Include="WSManAutomation">
       <Guid>{F010BE25-296D-4036-980F-5A0669A17577}</Guid>
       <VersionMajor>1</VersionMajor>

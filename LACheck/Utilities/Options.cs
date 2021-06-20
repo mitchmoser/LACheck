@@ -24,7 +24,8 @@ namespace LACheck.Utilities
         public string ou = null;
         public string socket = null;
         public string targets = null;
-        public string user = null;
+        public string userprincipalname = null;
+        public string netbiosuser = null;
     }
     class Options
     {
@@ -158,12 +159,14 @@ Arguments:
             }
             if (parsedArgs.ContainsKey("/user"))
             {
-                arguments.user = parsedArgs["/user"][0];
+                arguments.userprincipalname = parsedArgs["/user"][0];
+                arguments.netbiosuser = Utilities.LDAP.ConvertUserPrincipalNameToNetbios(arguments.userprincipalname, arguments);
                 userprovided = true;
             }
             else
             {
-                arguments.user = UserPrincipal.Current.UserPrincipalName;
+                arguments.userprincipalname = UserPrincipal.Current.UserPrincipalName;
+                arguments.netbiosuser = Utilities.LDAP.ConvertUserPrincipalNameToNetbios(arguments.userprincipalname, arguments);
             }
             if (parsedArgs.ContainsKey("/validate"))
             {
@@ -207,7 +210,7 @@ Arguments:
             Console.WriteLine("\t/socket: {0}", args.socket);
             Console.WriteLine("\t/targets: {0}", args.targets);
             Console.WriteLine("\t/threads: {0}", args.threads);
-            Console.WriteLine("\t/user: {0}", args.user);
+            Console.WriteLine("\t/user: {0}", args.userprincipalname);
             Console.WriteLine("\t/validate: {0}", args.validate);
             Console.WriteLine("\t/verbose: {0}", args.verbose);
         }

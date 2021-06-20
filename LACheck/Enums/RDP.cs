@@ -202,10 +202,14 @@ namespace LACheck.Enums
                         WTSQuerySessionInformation(serverHandle, si.SessionID, WTS_INFO_CLASS.WTSSessionInfo, out wtsinfoPtr, out bytes);
 
                         string domain = Marshal.PtrToStringAnsi(domainPtr);
-                        //resolve netbios name to fqdn if present
-                        if (Utilities.BloodHound.NetBiosDomain.ContainsKey(domain.ToUpper()))
-                            domain = Utilities.BloodHound.NetBiosDomain[domain.ToUpper()];
                         string username = Marshal.PtrToStringAnsi(userPtr);
+                        string userprincipalname = $"{username}@{domain}";
+                        string netbiosuser = Utilities.LDAP.ConvertUserPrincipalNameToNetbios(userprincipalname, arguments);
+                        if (!String.IsNullOrEmpty(netbiosuser))
+                        {
+                            //replace FQDN with NETBIOS
+                            domain = netbiosuser.Split('\\')[0];
+                        }
                         var wtsinfo = (WTSINFOA)Marshal.PtrToStructure(wtsinfoPtr, typeof(WTSINFOA));
                         DateTime collecionTime = DateTime.FromFileTimeUtc(wtsinfo.CurrentTimeUTC);
                         DateTime lastInput = DateTime.FromFileTimeUtc(wtsinfo.LastInputTimeUTC);
@@ -240,7 +244,7 @@ namespace LACheck.Enums
                 sessions = sessions.Distinct().ToList();
                 foreach (string session in sessions)
                 {
-                    Console.WriteLine($"[rdp] {hostname} - {session} ({arguments.user})");
+                    Console.WriteLine($"[rdp] {hostname} - {session} ({arguments.userprincipalname})");
                 }
             }
             catch (Exception ex)
