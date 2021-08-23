@@ -127,7 +127,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to query services over WinRM: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to query services over WinRM: {ex.Message.Trim()}");
                 }
             }
             return sessions;
@@ -178,7 +178,7 @@ namespace LACheck.Enums
                 {
                     if (arguments.verbose)
                     {
-                        Console.WriteLine($"[!] {host} - Unable to query sessions over WinRM: {ex.Message}");
+                        Console.WriteLine($"[!] {host} - Unable to query sessions over WinRM: {ex.Message.Trim()}");
                     }
                 }
             }
@@ -265,7 +265,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to query services over WMI: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to query services over WMI: {ex.Message.Trim()}");
                 }
             }
             return sessions;
@@ -314,7 +314,7 @@ namespace LACheck.Enums
                 {
                     if (arguments.verbose)
                     {
-                        Console.WriteLine($"[!] {host} - Unable to query services over WMI: {ex.Message}");
+                        Console.WriteLine($"[!] {host} - Unable to query services over WMI: {ex.Message.Trim()}");
                     }
                 }
             }

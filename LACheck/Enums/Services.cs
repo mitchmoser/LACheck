@@ -157,7 +157,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to query services: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to query services: {ex.Message.Trim()}");
                 }
             }
         }
@@ -226,7 +226,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to query services over WinRM: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to query services over WinRM: {ex.Message.Trim()}");
                 }
             }
         }
@@ -286,7 +286,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to query services over WMI: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to query services over WMI: {ex.Message.Trim()}");
                 }
             }
         }
@@ -350,7 +350,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to get service information: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to get service information: {ex.Message.Trim()}");
                 }
             }
             return serviceInfo;
@@ -406,7 +406,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to query services: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to query services: {ex.Message.Trim()}");
                 }
             }
             return reconfig;
@@ -421,7 +421,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to start Remote Registry service: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to start Remote Registry service: {ex.Message.Trim()}");
                 }
             }
         }
@@ -450,7 +450,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to stop Remote Registry service: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to stop Remote Registry service: {ex.Message.Trim()}");
                 }
             }
         }
@@ -491,7 +491,7 @@ namespace LACheck.Enums
             {
                 int nError = Marshal.GetLastWin32Error();
                 var win32Exception = new Win32Exception(nError);
-                throw new ExternalException($"[!] {host} - Could not change service start type: {win32Exception.Message}");
+                throw new ExternalException($"[!] {host} - Could not change service start type: {win32Exception.Message.Trim()}");
             }
 
             CloseServiceHandle(serviceHandle);

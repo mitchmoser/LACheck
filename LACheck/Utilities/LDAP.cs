@@ -11,13 +11,14 @@ namespace LACheck.Utilities
 {
     class LDAP
     {
-        public static string GetComputerSID(string host, bool verbose)
+        public static string GetComputerSID(string host, Utilities.Arguments arguments)
         {
             string SID = null;
             try
             {
-                Forest currentForest = Forest.GetCurrentForest();
-                GlobalCatalog globalCatalog = currentForest.FindGlobalCatalog();
+                DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
+                Forest forest = Forest.GetForest(directoryContext);
+                GlobalCatalog globalCatalog = forest.FindGlobalCatalog();
                 DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
 
                 globalCatalogSearcher.PropertiesToLoad.Add("objectsid");
@@ -38,9 +39,9 @@ namespace LACheck.Utilities
             }
             catch (Exception ex)
             {
-                if (verbose)
+                if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
+                    Console.WriteLine($"[!] LDAP Error: {ex.Message.Trim()}");
                 }
                 return SID;
             }
@@ -50,8 +51,9 @@ namespace LACheck.Utilities
             string SID = null;
             try
             {
-                Forest currentForest = Forest.GetCurrentForest();
-                GlobalCatalog globalCatalog = currentForest.FindGlobalCatalog();
+                DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
+                Forest forest = Forest.GetForest(directoryContext);
+                GlobalCatalog globalCatalog = forest.FindGlobalCatalog();
                 DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
 
                 globalCatalogSearcher.PropertiesToLoad.Add("objectsid");
@@ -76,7 +78,7 @@ namespace LACheck.Utilities
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
+                    Console.WriteLine($"[!] LDAP Error: {ex.Message.Trim()}");
                 }
                 return SID;
             }
@@ -88,8 +90,9 @@ namespace LACheck.Utilities
             Console.WriteLine("[+] Gathering Enabled Users...");
             try
             {
-                Forest currentForest = Forest.GetCurrentForest();
-                GlobalCatalog globalCatalog = currentForest.FindGlobalCatalog();
+                DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
+                Forest forest = Forest.GetForest(directoryContext);
+                GlobalCatalog globalCatalog = forest.FindGlobalCatalog();
                 DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
 
                 //userprincipalname = samaccountname@domain.fqdn format
@@ -148,12 +151,12 @@ namespace LACheck.Utilities
                     }
                 }
 
-                Console.WriteLine($"[+] Enabled Users returned: {users.Count.ToString()}");
+                Console.WriteLine($"[+] Enabled Users returned: {users.Count}");
                 globalCatalogSearcher.Dispose();
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[!] LDAP Error Getting User SIDs: {0}", ex.Message);
+                Console.WriteLine($"[!] LDAP Error Getting User SIDs: {ex.Message.Trim()}");
                 return null;
             }
 
@@ -164,24 +167,29 @@ namespace LACheck.Utilities
             try
             {
                 NameTranslate nameTranslate = new NameTranslate();
+                nameTranslate.Init((int)ADS_NAME_INITTYPE_ENUM.ADS_NAME_INITTYPE_DOMAIN, arguments.domain);
                 nameTranslate.Set((int)ADS_NAME_TYPE_ENUM.ADS_NAME_TYPE_USER_PRINCIPAL_NAME, userprincipalname);
                 return nameTranslate.Get((int)ADS_NAME_TYPE_ENUM.ADS_NAME_TYPE_NT4).ToLower();
             }
             catch (Exception ex)
             {
                 if (arguments.verbose)
-                    Console.WriteLine($"[!] Error Converting userprincipalname {userprincipalname}: {ex.Message}");
+                    Console.WriteLine($"[!] Error Converting userprincipalname {userprincipalname}: {ex.Message.Trim()}");
                 return null;
             }
         }
-        public static Dictionary<string, string> SearchOU(string ou, bool verbose)
+        public static Dictionary<string, string> SearchOU(string ou, Utilities.Arguments arguments)
         {
             try
             {
                 Dictionary<string, string> hosts = new Dictionary<string, string>();
                 string searchbase = "LDAP://" + ou;//OU=Domain Controllers,DC=example,DC=local";
+                
+                DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Domain, arguments.domain);
+                Domain domain = Domain.GetDomain(directoryContext);
                 DirectoryEntry entry = new DirectoryEntry(searchbase);
                 DirectorySearcher mySearcher = new DirectorySearcher(entry);
+                
                 //mySearcher.PropertiesToLoad.Add("cn");
                 mySearcher.PropertiesToLoad.Add("dnshostname");
                 mySearcher.PropertiesToLoad.Add("objectsid");
@@ -210,17 +218,17 @@ namespace LACheck.Utilities
                 {
                     hosts.Remove(partialMatch);
                 }
-                Console.WriteLine("[+] OU Search Results: {0}", hosts.Count().ToString());
+                Console.WriteLine($"[+] OU Search Results: {hosts.Count().ToString()}");
 
                 return hosts;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
+                Console.WriteLine($"[!] LDAP Error: {ex.Message.Trim()}");
                 return null;
             }
         }
-        public static Dictionary<string, string> SearchLDAP(string ldap, bool verbose)
+        public static Dictionary<string, string> SearchLDAP(string ldap, Utilities.Arguments arguments)
         {
             bool searchGlobalCatalog = true;
             string description = null;
@@ -253,17 +261,18 @@ namespace LACheck.Utilities
                     filter = ("(&(objectCategory=computer)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(operatingSystem=*server*)(!(userAccountControl:1.2.840.113556.1.4.803:=8192))(!(userAccountControl:1.2.840.113556.1.4.803:=67100867)))");
                     break;
                 default:
-                    Console.WriteLine("[!] Invalid LDAP filter: {0}", filter);
-                    Utilities.Options.Usage();
-                    Environment.Exit(0);
-                    break;
+                    Console.WriteLine($"[!] Invalid LDAP filter: {filter}");
+                    //Utilities.Options.Usage();
+                    //Environment.Exit(0);
+                    return null;
             }
             if (searchGlobalCatalog)
             {
                 try
                 {
-                    Forest currentForest = Forest.GetCurrentForest();
-                    GlobalCatalog globalCatalog = currentForest.FindGlobalCatalog();
+                    DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
+                    Forest forest = Forest.GetForest(directoryContext);
+                    GlobalCatalog globalCatalog = forest.FindGlobalCatalog();
                     DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
 
                     //globalCatalogSearcher.PropertiesToLoad.Add("cn");
@@ -274,7 +283,7 @@ namespace LACheck.Utilities
                     globalCatalogSearcher.Filter = filter;
                     globalCatalogSearcher.SizeLimit = int.MaxValue;
                     globalCatalogSearcher.PageSize = int.MaxValue;
-                    Console.WriteLine("[+] Performing LDAP query against Global Catalog for {0}...", description);
+                    Console.WriteLine($"[+] Performing LDAP query against Global Catalog for {description}...");
                     Console.WriteLine("[+] This may take some time depending on the size of the environment");
 
                     foreach (SearchResult resEnt in globalCatalogSearcher.FindAll())
@@ -294,9 +303,9 @@ namespace LACheck.Utilities
                 }
                 catch (Exception ex)
                 {
-                    if (verbose)
+                    if (arguments.verbose)
                     {
-                        Console.WriteLine("[!] LDAP Error searching Global Catalog: {0}", ex.Message);
+                        Console.WriteLine($"[!] LDAP Error searching Global Catalog: {ex.Message.Trim()}");
                     }
                 }
             }
@@ -305,7 +314,9 @@ namespace LACheck.Utilities
                 Console.WriteLine("not searching global catalog");
                 try
                 {
-                    DirectoryEntry entry = new DirectoryEntry();
+                    DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Domain, arguments.domain);
+                    Domain domain = Domain.GetDomain(directoryContext);
+                    DirectoryEntry entry = new DirectoryEntry(domain);
                     DirectorySearcher mySearcher = new DirectorySearcher(entry);
 
                     //globalCatalogSearcher.PropertiesToLoad.Add("cn");
@@ -316,7 +327,7 @@ namespace LACheck.Utilities
                     mySearcher.Filter = filter;
                     mySearcher.SizeLimit = int.MaxValue;
                     mySearcher.PageSize = int.MaxValue;
-                    Console.WriteLine("[+] Performing LDAP query against the current domain for {0}...", description);
+                    Console.WriteLine($"[+] Performing LDAP query against {arguments.domain} for {description}...");
                     Console.WriteLine("[+] This may take some time depending on the size of the environment");
 
                     foreach (SearchResult resEnt in mySearcher.FindAll())
@@ -336,9 +347,9 @@ namespace LACheck.Utilities
                 }
                 catch (Exception ex)
                 {
-                    if (verbose)
+                    if (arguments.verbose)
                     {
-                        Console.WriteLine("[!] LDAP Error: {0}", ex.Message);
+                        Console.WriteLine($"[!] LDAP Error: {ex.Message.Trim()}");
                     }
                 }
             }

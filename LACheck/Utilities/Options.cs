@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.DirectoryServices.AccountManagement;
+using System.DirectoryServices.ActiveDirectory;
 
 
 namespace LACheck.Utilities
@@ -20,6 +21,8 @@ namespace LACheck.Utilities
         public bool verbose = false;
         public bool winrm = false;
         public int threads = 25;
+        public string dc = null;
+        public string domain = null;
         public string ldap = null;
         public string ou = null;
         public string socket = null;
@@ -40,7 +43,7 @@ namespace LACheck.Utilities
  |______/_/    \_\  \_____|_| |_|\___|\___|_|\_\
 
 Usage:
-    LACheck.exe smb rpc /targets:hostname,fqdn.domain.tld,10.10.10.10 /ldap:all /ou:""OU=Special Servers,DC=example,DC=local"" /verbose /bloodhound /user:bob@contoso.lab
+    LACheck.exe smb rpc /targets:hostname,fqdn.domain.tld,10.10.10.10 /ldap:all /ou:""OU=Special Servers,DC=example,DC=local"" /domain:example.tld /verbose /bloodhound /user:bob@contoso.lab
 
 Local Admin Checks:
     smb   - Attempts to access C$ share
@@ -50,6 +53,7 @@ Local Admin Checks:
 Arguments:
     /bloodhound - generate bloodhound-digestible AdminTo and Session collection file
                   output file is zipped and enypted with randomized name and password
+    /domain     - specify domain name (if not ran on a domain-joined host)
     /edr        - check host for EDR (requires smb, rpc, or winrm)
     /logons     - return logged on users on a host (requires smb, rpc, or winrm)
     /registry   - enumerate sessions from registry hive (requires smb)
@@ -59,7 +63,6 @@ Arguments:
     /targets    - comma-separated list of hostnames to check
     /threads    - specify maximum number of parallel threads (default=25)
     /user       - specify username that collection was run under (useful during token manipulation)
-    /validate   - check credentials against Domain prior to scanning targets (useful during token manipulation)
     /verbose    - print additional logging information
     /ou         - specify LDAP OU to query enabled computer objects from
                   ex: ""OU=Special Servers,DC=example,DC=local""
@@ -105,9 +108,19 @@ Arguments:
         {
             Arguments arguments = new Arguments();
             bool userprovided = false;
+            bool domainprovided = false;
             if (parsedArgs.ContainsKey("/bloodhound"))
             {
                 arguments.bloodhound = Convert.ToBoolean(parsedArgs["/bloodhound"][0]);
+            }
+            if (parsedArgs.ContainsKey("/dc"))
+            {
+                arguments.dc = parsedArgs["/dc"][0];
+            }
+            if (parsedArgs.ContainsKey("/domain"))
+            {
+                arguments.domain = parsedArgs["/domain"][0];
+                domainprovided = true;
             }
             if (parsedArgs.ContainsKey("/edr"))
             {
@@ -179,18 +192,49 @@ Arguments:
             if (parsedArgs.ContainsKey("help"))
             {
                 Usage();
-                Environment.Exit(0);
+                //Environment.Exit(0);
             }
             if (!parsedArgs.ContainsKey("smb") && !parsedArgs.ContainsKey("rpc") && !parsedArgs.ContainsKey("winrm"))
             {
                 Console.WriteLine("[!] No check type specified: smb rpc winrm");
                 Usage();
-                Environment.Exit(0);
+                return null;
+                //Environment.Exit(0);
+            }
+            if (!domainprovided)
+            {
+                Console.WriteLine($"[!] No domain specified...");
+                try
+                {
+                    //if no domain provided, attempt to connect to domain context
+                    arguments.domain = Forest.GetCurrentForest().ToString();
+                    Console.WriteLine($"    - Connecting to domain context of host: {arguments.domain}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"    X Unable to connect to domain context: {ex.Message.Trim()}");
+                    return null;
+                }
+                if (userprovided)
+                {
+                    try
+                    {
+                        arguments.domain = arguments.userprincipalname.Split('@')[1];
+                        Console.WriteLine($"    - Using domain specified by username: {arguments.domain}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"    X Unable to parse domain from {arguments.userprincipalname}: {ex.Message.Trim()}");
+                        //Environment.Exit(0);
+                        return null;
+                    }
+                }
             }
             if (arguments.bloodhound && !userprovided)
             {
                 Console.WriteLine("[!] specify current user with /user flag in 'username@domain.fqdn' format");
-                Environment.Exit(0);
+                //Environment.Exit(0);
+                return null;
             }
             return arguments;
         }
@@ -201,6 +245,8 @@ Arguments:
             Console.WriteLine("\tsmb: {0}", args.smb);
             Console.WriteLine("\twinrm: {0}", args.winrm);
             Console.WriteLine("\t/bloodhound: {0}", args.bloodhound);
+            Console.WriteLine("\t/dc: {0}", args.dc);
+            Console.WriteLine("\t/domain: {0}", args.domain);
             Console.WriteLine("\t/edr: {0}", args.edr);
             Console.WriteLine("\t/logons: {0}", args.logons);
             Console.WriteLine("\t/registry: {0}", args.registry);
@@ -211,11 +257,15 @@ Arguments:
             Console.WriteLine("\t/targets: {0}", args.targets);
             Console.WriteLine("\t/threads: {0}", args.threads);
             Console.WriteLine("\t/user: {0}", args.userprincipalname);
-            Console.WriteLine("\t/validate: {0}", args.validate);
+            //Console.WriteLine("\t/validate: {0}", args.validate);
             Console.WriteLine("\t/verbose: {0}", args.verbose);
         }
         public static void ValidateCredentials()
         {
+            //doesn't support beacon's impersonation... removing for now
+            // pulled description from usage guide:
+            //    /validate   - check credentials against Domain prior to scanning targets (useful during token manipulation)
+            /*
             try
             {
                 //https://stackoverflow.com/questions/326818/how-to-validate-domain-credentials
@@ -237,10 +287,10 @@ Arguments:
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[!] Credential Validation Error: {0}", ex.Message);
+                Console.WriteLine($"[!] Credential Validation Error: {ex.Message.Trim()}");
                 Environment.Exit(1);
             }
-
+            */
         }
     }
 }

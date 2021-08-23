@@ -251,10 +251,10 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] RDP Session Collection Error: {ex.Message}");
+                    Console.WriteLine($"[!] RDP Session Collection Error: {ex.Message.Trim()}");
                 }
                 WTSCloseServer(serverHandle);
-                Environment.Exit(0);
+                //Environment.Exit(0);
             }
             finally
             {

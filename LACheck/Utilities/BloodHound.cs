@@ -148,7 +148,7 @@ namespace LACheck.Utilities
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[!] Error sending output over TCP Socket: {ex.Message}");
+                Console.WriteLine($"[!] Error sending output over TCP Socket: {ex.Message.Trim()}");
                 OutputFile(output);
             }
         }

@@ -158,7 +158,7 @@ namespace LACheck.Enums
             {
                 if (verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to query registry over WinRM: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to query registry over WinRM: {ex.Message.Trim()}");
                 }
             }
         }
@@ -230,7 +230,7 @@ namespace LACheck.Enums
             {
                 if (arguments.verbose)
                 {
-                    Console.WriteLine($"[!] {host} - Unable to query registry over WMI: {ex.Message}");
+                    Console.WriteLine($"[!] {host} - Unable to query registry over WMI: {ex.Message.Trim()}");
                 }
             }
         }
