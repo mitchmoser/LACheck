@@ -22,6 +22,8 @@ Local Admin Checks:
 Arguments:
     /bloodhound - generate bloodhound-digestible AdminTo and Session collection file
                   output file is zipped and enypted with randomized name and password
+    /dc         - specify domain controller to query (if not ran on a domain-joined host)
+    /domain     - specify domain name (if not ran on a domain-joined host)
     /edr        - check host for EDR (requires smb, rpc, or winrm)
     /logons     - return logged on users on a host (requires smb, rpc, or winrm)
     /registry   - enumerate sessions from registry hive (requires smb)
