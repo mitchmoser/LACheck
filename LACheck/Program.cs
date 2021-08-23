@@ -24,7 +24,7 @@ namespace LACheck
                 Dictionary<string, string> hosts = new Dictionary<string, string>();
                 if (!String.IsNullOrEmpty(arguments.ldap))
                 {
-                    Dictionary<string, string> ldap = Utilities.LDAP.SearchLDAP(arguments.ldap, arguments);
+                    Dictionary<string, string> ldap = Utilities.LDAP.SearchLDAP(arguments);
                     if (ldap != null)
                         hosts = hosts.Union(ldap.Where(k => !hosts.ContainsKey(k.Key))).ToDictionary(k => k.Key, v => v.Value);
                 }

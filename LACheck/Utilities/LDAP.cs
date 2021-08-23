@@ -16,11 +16,34 @@ namespace LACheck.Utilities
             string SID = null;
             try
             {
-                DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
-                Forest forest = Forest.GetForest(directoryContext);
-                GlobalCatalog globalCatalog = forest.FindGlobalCatalog();
-                DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
-
+                DirectoryEntry entry = null;
+                DirectorySearcher globalCatalogSearcher = null;
+                if (!String.IsNullOrEmpty(arguments.dc) && !String.IsNullOrEmpty(arguments.domain))
+                {
+                    try
+                    {
+                        string directoryEntry = $"GC://{arguments.dc}/DC={arguments.domain.Replace(".", ",DC=")}";
+                        Console.WriteLine($"[+] Attempting to connect to Global Catalog to get Computer SIDS: {directoryEntry}");
+                        entry = new DirectoryEntry(directoryEntry);
+                        globalCatalogSearcher = new DirectorySearcher(entry);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[!] LDAP Error connecting to Global Catalog: {ex.Message.Trim()}");
+                        string directoryEntry = $"LDAP://{arguments.dc}/DC={arguments.domain.Replace(".", ",DC=")}";
+                        Console.WriteLine($"[+] Querying DC without Global Catalog to get Computer SIDS: {directoryEntry}");
+                        entry = new DirectoryEntry(directoryEntry);
+                        globalCatalogSearcher = new DirectorySearcher(entry);
+                    }
+                }
+                else
+                {
+                    DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
+                    Forest currentForest = Forest.GetForest(directoryContext);
+                    GlobalCatalog globalCatalog = currentForest.FindGlobalCatalog();
+                    globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
+                }
+                
                 globalCatalogSearcher.PropertiesToLoad.Add("objectsid");
                 // filter for computer by samaccountname
                 //globalCatalogSearcher.Filter = (String.Format("(&(objectCategory=computer)(samaccountname=*{0}*))", host));
@@ -51,11 +74,33 @@ namespace LACheck.Utilities
             string SID = null;
             try
             {
-                DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
-                Forest forest = Forest.GetForest(directoryContext);
-                GlobalCatalog globalCatalog = forest.FindGlobalCatalog();
-                DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
-
+                DirectoryEntry entry = null;
+                DirectorySearcher globalCatalogSearcher = null;
+                if (!String.IsNullOrEmpty(arguments.dc) && !String.IsNullOrEmpty(arguments.domain))
+                {
+                    try
+                    {
+                        string directoryEntry = $"GC://{arguments.dc}/DC={arguments.domain.Replace(".", ",DC=")}";
+                        Console.WriteLine($"[+] Attempting to connect to Global Catalog to query SID for {user}: {directoryEntry}");
+                        entry = new DirectoryEntry(directoryEntry);
+                        globalCatalogSearcher = new DirectorySearcher(entry);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[!] LDAP Error connecting to Global Catalog: {ex.Message.Trim()}");
+                        string directoryEntry = $"LDAP://{arguments.dc}/DC={arguments.domain.Replace(".", ",DC=")}";
+                        Console.WriteLine($"[+] Querying DC without Global Catalog to query SID for {user}: {directoryEntry}");
+                        entry = new DirectoryEntry(directoryEntry);
+                        globalCatalogSearcher = new DirectorySearcher(entry);
+                    }
+                }
+                else
+                {
+                    DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
+                    Forest forest = Forest.GetForest(directoryContext);
+                    GlobalCatalog globalCatalog = forest.FindGlobalCatalog();
+                    globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
+                }
                 globalCatalogSearcher.PropertiesToLoad.Add("objectsid");
                 // filter for userprincipalname (format = samaccountname@domain.fqdn)
                 globalCatalogSearcher.Filter = (String.Format("(&(objectCategory=user)(userprincipalname={0}))", user));
@@ -90,11 +135,33 @@ namespace LACheck.Utilities
             Console.WriteLine("[+] Gathering Enabled Users...");
             try
             {
-                DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
-                Forest forest = Forest.GetForest(directoryContext);
-                GlobalCatalog globalCatalog = forest.FindGlobalCatalog();
-                DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
-
+                DirectoryEntry entry = null;
+                DirectorySearcher globalCatalogSearcher = null;
+                if (!String.IsNullOrEmpty(arguments.dc) && !String.IsNullOrEmpty(arguments.domain))
+                {
+                    try
+                    {
+                        string directoryEntry = $"GC://{arguments.dc}/DC={arguments.domain.Replace(".", ",DC=")}";
+                        Console.WriteLine($"[+] Attempting to connect to Global Catalog to query SIDs for all enabled users: {directoryEntry}");
+                        entry = new DirectoryEntry(directoryEntry);
+                        globalCatalogSearcher = new DirectorySearcher(entry);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[!] LDAP Error connecting to Global Catalog: {ex.Message.Trim()}");
+                        string directoryEntry = $"LDAP://{arguments.dc}/DC={arguments.domain.Replace(".", ",DC=")}";
+                        Console.WriteLine($"[+] Querying DC without Global Catalog to query SIDs for all enabled users: {directoryEntry}");
+                        entry = new DirectoryEntry(directoryEntry);
+                        globalCatalogSearcher = new DirectorySearcher(entry);
+                    }
+                }
+                else
+                {
+                    DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
+                    Forest forest = Forest.GetForest(directoryContext);
+                    GlobalCatalog globalCatalog = forest.FindGlobalCatalog();
+                    globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
+                }
                 //userprincipalname = samaccountname@domain.fqdn format
                 //does not exist for MSAs or built-in Administrator
                 //globalCatalogSearcher.PropertiesToLoad.Add("userprincipalname");
@@ -183,13 +250,34 @@ namespace LACheck.Utilities
             try
             {
                 Dictionary<string, string> hosts = new Dictionary<string, string>();
-                string searchbase = "LDAP://" + ou;//OU=Domain Controllers,DC=example,DC=local";
-                
-                DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Domain, arguments.domain);
-                Domain domain = Domain.GetDomain(directoryContext);
-                DirectoryEntry entry = new DirectoryEntry(searchbase);
-                DirectorySearcher mySearcher = new DirectorySearcher(entry);
-                
+                DirectoryEntry entry = null;
+                DirectorySearcher mySearcher = null;
+                if (!String.IsNullOrEmpty(arguments.dc) && !String.IsNullOrEmpty(arguments.domain))
+                {
+                    try
+                    {
+                        string directoryEntry = $"GC://{arguments.dc}/{ou}";
+                        Console.WriteLine($"[+] Attempting to connect to Global Catalog for OU: {directoryEntry}");
+                        entry = new DirectoryEntry(directoryEntry);
+                        mySearcher = new DirectorySearcher(entry);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[!] LDAP Error connecting to Global Catalog: {ex.Message.Trim()}");
+                        string directoryEntry = $"LDAP://{arguments.dc}/{ou}";
+                        Console.WriteLine($"[+] Querying DC without Global Catalog to query SIDs for OU: {directoryEntry}");
+                        entry = new DirectoryEntry(directoryEntry);
+                        mySearcher = new DirectorySearcher(entry);
+                    }
+                }
+                else
+                {
+                    string searchbase = "LDAP://" + ou;//OU=Domain Controllers,DC=example,DC=local";
+                    DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Domain, arguments.domain);
+                    Domain domain = Domain.GetDomain(directoryContext);
+                    entry = new DirectoryEntry(searchbase);
+                    mySearcher = new DirectorySearcher(entry);
+                }
                 //mySearcher.PropertiesToLoad.Add("cn");
                 mySearcher.PropertiesToLoad.Add("dnshostname");
                 mySearcher.PropertiesToLoad.Add("objectsid");
@@ -228,7 +316,7 @@ namespace LACheck.Utilities
                 return null;
             }
         }
-        public static Dictionary<string, string> SearchLDAP(string ldap, Utilities.Arguments arguments)
+        public static Dictionary<string, string> SearchLDAP(Utilities.Arguments arguments)
         {
             bool searchGlobalCatalog = true;
             string description = null;
@@ -236,7 +324,7 @@ namespace LACheck.Utilities
             
             Dictionary<string, string> hosts = new Dictionary<string, string>();
             
-            switch (ldap)
+            switch (arguments.ldap)
             {
                 case "all":
                     description = "all enabled computers with \"primary\" group \"Domain Computers\"";
@@ -270,11 +358,30 @@ namespace LACheck.Utilities
             {
                 try
                 {
-                    DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Forest, arguments.domain);
-                    Forest forest = Forest.GetForest(directoryContext);
-                    GlobalCatalog globalCatalog = forest.FindGlobalCatalog();
-                    DirectorySearcher globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
-
+                    DirectoryEntry entry = null;
+                    DirectorySearcher globalCatalogSearcher = null;
+                    if (!String.IsNullOrEmpty(arguments.dc) && !String.IsNullOrEmpty(arguments.domain))
+                        try
+                        {
+                            string directoryEntry = $"GC://{arguments.dc}/DC={arguments.domain.Replace(".", ",DC=")}";
+                            Console.WriteLine($"[+] Attempting to connect to Global Catalog: {directoryEntry}");
+                            entry = new DirectoryEntry(directoryEntry);
+                            globalCatalogSearcher = new DirectorySearcher(entry);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[!] LDAP Error connecting to Global Catalog: {ex.Message.Trim()}");
+                            string directoryEntry = $"LDAP://{arguments.dc}/DC={arguments.domain.Replace(".", ",DC=")}";
+                            Console.WriteLine($"[+] Querying DC without Global Catalog: {directoryEntry}");
+                            entry = new DirectoryEntry(directoryEntry);
+                            globalCatalogSearcher = new DirectorySearcher(entry);
+                        }
+                    else
+                    {
+                        Forest currentForest = Forest.GetCurrentForest();
+                        GlobalCatalog globalCatalog = currentForest.FindGlobalCatalog();
+                        globalCatalogSearcher = globalCatalog.GetDirectorySearcher();
+                    }
                     //globalCatalogSearcher.PropertiesToLoad.Add("cn");
                     globalCatalogSearcher.PropertiesToLoad.Add("dnshostname");
                     globalCatalogSearcher.PropertiesToLoad.Add("objectsid");
@@ -311,14 +418,25 @@ namespace LACheck.Utilities
             }
             else
             {
-                Console.WriteLine("not searching global catalog");
                 try
                 {
-                    DirectoryContext directoryContext = new DirectoryContext(DirectoryContextType.Domain, arguments.domain);
-                    Domain domain = Domain.GetDomain(directoryContext);
-                    DirectoryEntry entry = new DirectoryEntry(domain);
-                    DirectorySearcher mySearcher = new DirectorySearcher(entry);
+                    DirectoryEntry entry = null;
+                    DirectorySearcher mySearcher = null;
+                    if (!String.IsNullOrEmpty(arguments.dc) && !String.IsNullOrEmpty(arguments.domain))
+                    {
+                        string directoryEntry = $"LDAP://{arguments.dc}/DC={arguments.domain.Replace(".", ",DC=")}";
+                        Console.WriteLine($"[+] Performing LDAP query against {directoryEntry} for {description}...");
+                        Console.WriteLine("[+] This may take some time depending on the size of the environment");
+                        entry = new DirectoryEntry(directoryEntry);
+                        mySearcher = new DirectorySearcher(entry);
 
+                    }
+                    else
+                    {
+                        entry = new DirectoryEntry();
+                        mySearcher = new DirectorySearcher(entry);
+                    }
+                    
                     //globalCatalogSearcher.PropertiesToLoad.Add("cn");
                     mySearcher.PropertiesToLoad.Add("dnshostname");
                     mySearcher.PropertiesToLoad.Add("objectsid");
